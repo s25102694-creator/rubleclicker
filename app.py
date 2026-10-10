@@ -202,14 +202,16 @@ def list_unions():
     if search:
         cur.execute("""
             SELECT u.id, u.name, u.tag, u.color, u.description, u.founder, u.created,
-                   (SELECT COUNT(*) FROM union_members m WHERE m.union_id=u.id) AS cnt
+                   (SELECT COUNT(*) FROM union_members m WHERE m.union_id=u.id) AS cnt,
+                   COALESCE(u.closed, FALSE), COALESCE(u.treasury, 0)
             FROM unions u WHERE LOWER(u.name) LIKE LOWER(%s) OR LOWER(u.tag) LIKE LOWER(%s)
             ORDER BY cnt DESC, u.id ASC LIMIT 50
         """, (f"%{search}%", f"%{search}%"))
     else:
         cur.execute("""
             SELECT u.id, u.name, u.tag, u.color, u.description, u.founder, u.created,
-                   (SELECT COUNT(*) FROM union_members m WHERE m.union_id=u.id) AS cnt
+                   (SELECT COUNT(*) FROM union_members m WHERE m.union_id=u.id) AS cnt,
+                   COALESCE(u.closed, FALSE), COALESCE(u.treasury, 0)
             FROM unions u ORDER BY cnt DESC, u.id ASC LIMIT 50
         """)
     rows = cur.fetchall()
@@ -221,7 +223,8 @@ def list_unions():
         "my_union_id": my_union,
         "unions": [{
             "id":r[0], "name":r[1], "tag":r[2], "color":r[3],
-            "description":r[4], "founder":r[5], "created":r[6], "members":int(r[7])
+            "description":r[4], "founder":r[5], "created":r[6], "members":int(r[7]),
+            "closed": bool(r[8]), "treasury": int(r[9])
         } for r in rows]
     })
 
@@ -233,6 +236,7 @@ def create_union():
     name = (d.get("name") or "").strip()
     tag  = (d.get("tag") or "").strip().upper()
     desc = (d.get("description") or "").strip()[:120]
+    closed = bool(d.get("closed", False))
     if len(name) < 3: return jsonify({"error":"Название минимум 3 символа"}), 400
     if len(name) > 40: return jsonify({"error":"Название максимум 40"}), 400
     if len(tag) < 2 or len(tag) > 4: return jsonify({"error":"Тег 2-4 символа"}), 400
@@ -247,8 +251,8 @@ def create_union():
         return jsonify({"error":"Ты уже в союзе"}), 400
     try:
         cur.execute(
-            "INSERT INTO unions (name, tag, color, description, founder, created) VALUES (%s,%s,%s,%s,%s,%s) RETURNING id",
-            (name, tag, color, desc or "Союз, основанный игроками", uname, _t.time())
+            "INSERT INTO unions (name, tag, color, description, founder, created, closed, treasury) VALUES (%s,%s,%s,%s,%s,%s,%s,0) RETURNING id",
+            (name, tag, color, desc or "Союз, основанный игроками", uname, _t.time(), closed)
         )
         uid = cur.fetchone()[0]
         cur.execute(
@@ -279,10 +283,14 @@ def join_union():
     if cur.fetchone():
         cur.close(); conn.close()
         return jsonify({"error":"Сначала выйди из текущего союза"}), 400
-    cur.execute("SELECT id FROM unions WHERE id=%s", (union_id,))
-    if not cur.fetchone():
+    cur.execute("SELECT id, COALESCE(closed, FALSE), founder FROM unions WHERE id=%s", (union_id,))
+    row = cur.fetchone()
+    if not row:
         cur.close(); conn.close()
         return jsonify({"error":"Союз не найден"}), 404
+    if row[1]:
+        cur.close(); conn.close()
+        return jsonify({"error":"Союз закрыт для входа"}), 403
     cur.execute(
         "INSERT INTO union_members (username, union_id, joined, role) VALUES (%s,%s,%s,'member')",
         (uname, union_id, _t.time())
@@ -310,12 +318,75 @@ def leave_union():
     conn.commit(); cur.close(); conn.close()
     return jsonify({"ok":True})
 
+@app.route("/api/unions/<int:uid>/toggle_closed", methods=["POST"])
+def union_toggle_closed(uid):
+    uname = auth_user()
+    if not uname: return jsonify({"error":"not_logged_in"}), 401
+    conn = get_db(); cur = conn.cursor()
+    cur.execute("SELECT role FROM union_members WHERE username=%s AND union_id=%s", (uname, uid))
+    r = cur.fetchone()
+    if not r or r[0] != "founder":
+        cur.close(); conn.close()
+        return jsonify({"error":"Только основатель может менять"}), 403
+    cur.execute("SELECT COALESCE(closed, FALSE) FROM unions WHERE id=%s", (uid,))
+    row = cur.fetchone()
+    if not row:
+        cur.close(); conn.close()
+        return jsonify({"error":"Союз не найден"}), 404
+    new_val = not row[0]
+    cur.execute("UPDATE unions SET closed=%s WHERE id=%s", (new_val, uid))
+    conn.commit(); cur.close(); conn.close()
+    return jsonify({"ok":True, "closed": new_val})
+
+@app.route("/api/unions/<int:uid>/deposit", methods=["POST"])
+def union_deposit(uid):
+    uname = auth_user()
+    if not uname: return jsonify({"error":"not_logged_in"}), 401
+    d = request.get_json() or {}
+    amount = int(d.get("amount") or 0)
+    if amount <= 0: return jsonify({"error":"Сумма должна быть > 0"}), 400
+    conn = get_db(); cur = conn.cursor()
+    cur.execute("SELECT 1 FROM union_members WHERE username=%s AND union_id=%s", (uname, uid))
+    if not cur.fetchone():
+        cur.close(); conn.close()
+        return jsonify({"error":"Ты не в этом союзе"}), 403
+    cur.execute("SELECT coins, COALESCE(infinite, FALSE) FROM users WHERE username=%s", (uname,))
+    u = cur.fetchone()
+    if not u:
+        cur.close(); conn.close()
+        return jsonify({"error":"Юзер не найден"}), 404
+    if not u[1]:
+        if int(u[0]) < amount:
+            cur.close(); conn.close()
+            return jsonify({"error":"Не хватает монет"}), 400
+        cur.execute("UPDATE users SET coins = coins - %s, version = version + 1 WHERE username=%s", (amount, uname))
+    cur.execute("UPDATE unions SET treasury = COALESCE(treasury,0) + %s WHERE id=%s", (amount, uid))
+    conn.commit(); cur.close(); conn.close()
+    return jsonify({"ok":True, "amount":amount})
+
+@app.route("/api/unions/top")
+def top_unions():
+    uname = auth_user()
+    if not uname: return jsonify({"error":"not_logged_in"}), 401
+    conn = get_db(); cur = conn.cursor()
+    cur.execute("""
+        SELECT u.id, u.name, u.tag, u.color, COALESCE(u.treasury,0) as treasury,
+               (SELECT COUNT(*) FROM union_members m WHERE m.union_id=u.id) as cnt
+        FROM unions u ORDER BY treasury DESC, cnt DESC LIMIT 50
+    """)
+    rows = cur.fetchall()
+    cur.close(); conn.close()
+    return jsonify([{
+        "id":r[0], "name":r[1], "tag":r[2], "color":r[3],
+        "treasury":int(r[4]), "members":int(r[5])
+    } for r in rows])
+
 @app.route("/api/unions/<int:uid>")
 def union_info(uid):
     uname = auth_user()
     if not uname: return jsonify({"error":"not_logged_in"}), 401
     conn = get_db(); cur = conn.cursor()
-    cur.execute("SELECT id, name, tag, color, description, founder, created FROM unions WHERE id=%s", (uid,))
+    cur.execute("SELECT id, name, tag, color, description, founder, created, COALESCE(closed, FALSE), COALESCE(treasury, 0) FROM unions WHERE id=%s", (uid,))
     u = cur.fetchone()
     if not u:
         cur.close(); conn.close()
@@ -323,11 +394,171 @@ def union_info(uid):
     cur.execute("SELECT username, joined, role FROM union_members WHERE union_id=%s ORDER BY joined ASC", (uid,))
     members = cur.fetchall()
     cur.close(); conn.close()
+    # я в этом союзе?
+    cur.execute("SELECT 1 FROM union_members WHERE username=%s AND union_id=%s", (uname, uid))
+    in_this = bool(cur.fetchone())
+    # роли
+    cur.execute("SELECT role FROM union_members WHERE username=%s AND union_id=%s", (uname, uid))
+    rr = cur.fetchone()
+    my_role = rr[0] if rr else None
+    cur.close(); conn.close()
     return jsonify({
         "id":u[0], "name":u[1], "tag":u[2], "color":u[3],
         "description":u[4], "founder":u[5], "created":u[6],
+        "closed": bool(u[7]), "treasury": int(u[8]),
+        "in_this": in_this, "my_role": my_role,
         "members":[{"username":m[0], "joined":m[1], "role":m[2]} for m in members]
     })
+
+
+# ---------- SKINS ----------
+SKINS_CATALOG = {
+    "classic":  {"name": "Классика",  "price": 0,             "emoji": "🪙"},
+    "silver":   {"name": "Серебро",   "price": 10000,         "emoji": "🥈"},
+    "gold":     {"name": "Золото",    "price": 100000,        "emoji": "🥇"},
+    "emerald":  {"name": "Изумруд",   "price": 500000,        "emoji": "💚"},
+    "ruby":     {"name": "Рубин",     "price": 2000000,       "emoji": "🔴"},
+    "diamond":  {"name": "Алмаз",     "price": 10000000,      "emoji": "💎"},
+    "neon":     {"name": "Неон",      "price": 50000000,      "emoji": "🟣"},
+    "fire":     {"name": "Огонь",     "price": 200000000,     "emoji": "🔥"},
+    "ice":      {"name": "Лёд",       "price": 500000000,     "emoji": "❄️"},
+    "cosmic":   {"name": "Космос",    "price": 5000000000,    "emoji": "🌌"},
+    "rainbow":  {"name": "Радуга",    "price": 100000000000,  "emoji": "🌈"},
+}
+
+@app.route("/api/skins")
+def skins_list():
+    uname = auth_user()
+    if not uname: return jsonify({"error":"not_logged_in"}), 401
+    conn = get_db(); cur = conn.cursor()
+    cur.execute("SELECT COALESCE(skin, 'classic') FROM users WHERE username=%s", (uname,))
+    row = cur.fetchone()
+    my_skin = row[0] if row else "classic"
+    cur.execute("SELECT skin_id FROM user_skins WHERE username=%s", (uname,))
+    owned = [r[0] for r in cur.fetchall()]
+    cur.close(); conn.close()
+    if "classic" not in owned: owned.insert(0, "classic")
+    return jsonify({"my_skin": my_skin, "owned": owned, "catalog": SKINS_CATALOG})
+
+@app.route("/api/skins/buy", methods=["POST"])
+def skins_buy():
+    uname = auth_user()
+    if not uname: return jsonify({"error":"not_logged_in"}), 401
+    d = request.get_json() or {}
+    skin_id = d.get("skin_id")
+    if skin_id not in SKINS_CATALOG: return jsonify({"error":"Неизвестный скин"}), 400
+    price = SKINS_CATALOG[skin_id]["price"]
+    conn = get_db(); cur = conn.cursor()
+    cur.execute("SELECT 1 FROM user_skins WHERE username=%s AND skin_id=%s", (uname, skin_id))
+    if cur.fetchone():
+        cur.close(); conn.close()
+        return jsonify({"error":"Уже куплен"}), 400
+    cur.execute("SELECT coins, COALESCE(infinite, FALSE) FROM users WHERE username=%s", (uname,))
+    u = cur.fetchone()
+    if not u:
+        cur.close(); conn.close()
+        return jsonify({"error":"Юзер не найден"}), 404
+    if not u[1] and int(u[0]) < price:
+        cur.close(); conn.close()
+        return jsonify({"error":"Не хватает монет"}), 400
+    if not u[1]:
+        cur.execute("UPDATE users SET coins = coins - %s, version = version + 1 WHERE username=%s", (price, uname))
+    import time as _t
+    cur.execute("INSERT INTO user_skins (username, skin_id, bought) VALUES (%s,%s,%s)", (uname, skin_id, _t.time()))
+    conn.commit(); cur.close(); conn.close()
+    return jsonify({"ok":True})
+
+@app.route("/api/skins/select", methods=["POST"])
+def skins_select():
+    uname = auth_user()
+    if not uname: return jsonify({"error":"not_logged_in"}), 401
+    d = request.get_json() or {}
+    skin_id = d.get("skin_id")
+    if skin_id not in SKINS_CATALOG: return jsonify({"error":"Неизвестный"}), 400
+    if skin_id != "classic":
+        conn = get_db(); cur = conn.cursor()
+        cur.execute("SELECT 1 FROM user_skins WHERE username=%s AND skin_id=%s", (uname, skin_id))
+        if not cur.fetchone():
+            cur.close(); conn.close()
+            return jsonify({"error":"Сначала купи"}), 400
+        cur.close(); conn.close()
+    conn = get_db(); cur = conn.cursor()
+    cur.execute("UPDATE users SET skin=%s, version=version+1 WHERE username=%s", (skin_id, uname))
+    conn.commit(); cur.close(); conn.close()
+    return jsonify({"ok":True})
+
+# ---------- CASINO ----------
+@app.route("/api/casino/flip", methods=["POST"])
+def casino_flip():
+    uname = auth_user()
+    if not uname: return jsonify({"error":"not_logged_in"}), 401
+    d = request.get_json() or {}
+    bet = int(d.get("bet") or 0)
+    choice = (d.get("choice") or "").lower()
+    if bet <= 0: return jsonify({"error":"Ставка должна быть > 0"}), 400
+    if choice not in ("heads","tails"): return jsonify({"error":"Выбери: heads или tails"}), 400
+    import random as _r
+    conn = get_db(); cur = conn.cursor()
+    cur.execute("SELECT coins, COALESCE(infinite, FALSE) FROM users WHERE username=%s", (uname,))
+    u = cur.fetchone()
+    if not u:
+        cur.close(); conn.close()
+        return jsonify({"error":"Юзер не найден"}), 404
+    if not u[1] and int(u[0]) < bet:
+        cur.close(); conn.close()
+        return jsonify({"error":"Не хватает монет"}), 400
+    result = _r.choice(["heads","tails"])
+    win = (result == choice)
+    if u[1]:
+        pass  # infinite — ничего не списываем/добавляем
+    else:
+        if win:
+            cur.execute("UPDATE users SET coins = coins + %s, version = version + 1 WHERE username=%s", (bet, uname))
+        else:
+            cur.execute("UPDATE users SET coins = coins - %s, version = version + 1 WHERE username=%s", (bet, uname))
+    conn.commit(); cur.close(); conn.close()
+    return jsonify({"ok":True, "result": result, "win": win, "bet": bet})
+
+@app.route("/api/casino/dice", methods=["POST"])
+def casino_dice():
+    uname = auth_user()
+    if not uname: return jsonify({"error":"not_logged_in"}), 401
+    d = request.get_json() or {}
+    bet = int(d.get("bet") or 0)
+    if bet <= 0: return jsonify({"error":"Ставка > 0"}), 400
+    import random as _r
+    conn = get_db(); cur = conn.cursor()
+    cur.execute("SELECT coins, COALESCE(infinite, FALSE) FROM users WHERE username=%s", (uname,))
+    u = cur.fetchone()
+    if not u:
+        cur.close(); conn.close()
+        return jsonify({"error":"Юзер не найден"}), 404
+    if not u[1] and int(u[0]) < bet:
+        cur.close(); conn.close()
+        return jsonify({"error":"Не хватает монет"}), 400
+    roll = _r.randint(1, 6)
+    # 6 = x3, 5 = x2, 4 = x1 (вернули), 1-3 = проигрыш
+    mult = {6: 3, 5: 2, 4: 1}.get(roll, 0)
+    if u[1]:
+        pass
+    else:
+        delta = bet * mult - bet
+        cur.execute("UPDATE users SET coins = coins + %s, version = version + 1 WHERE username=%s", (delta, uname))
+    conn.commit(); cur.close(); conn.close()
+    return jsonify({"ok":True, "roll": roll, "mult": mult, "bet": bet})
+
+# ---------- BROADCAST ----------
+@app.route("/api/broadcast")
+def get_broadcast():
+    uname = auth_user()
+    if not uname: return jsonify({"error":"not_logged_in"}), 401
+    import time as _t
+    conn = get_db(); cur = conn.cursor()
+    cur.execute("SELECT id, text, author, created FROM broadcasts WHERE expires > %s ORDER BY id DESC LIMIT 1", (_t.time(),))
+    r = cur.fetchone()
+    cur.close(); conn.close()
+    if not r: return jsonify({"broadcast": None})
+    return jsonify({"broadcast": {"id":r[0], "text":r[1], "author":r[2], "created":r[3]}})
 
 if __name__ == "__main__":
     import os

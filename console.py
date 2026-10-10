@@ -20,6 +20,7 @@ HELP = """
 ║  /delete <ник>             удалить игрока    ║
 ║  /passwd <ник> <new>       сменить пароль    ║
 ║  /top                      топ по монетам    ║
+║  /text <сообщение>         всем на экран     ║
 ║  /help                     эта справка       ║
 ║  /exit                     выход             ║
 ╚══════════════════════════════════════════════╝
@@ -134,6 +135,15 @@ def main():
                     update(name, cps=n, cps_lvl=n); print(f"✅ {u[1]}: {n} ₽/сек")
                 elif cmd == "click":
                     update(name, per_click=n, click_lvl=max(0,n-1)); print(f"✅ {u[1]}: {n} ₽ за тап")
+            elif cmd == "text":
+                if len(args) < 1: print("❌ /text <сообщение>"); continue
+                msg = " ".join(args)[:200]
+                import time as _t
+                conn = get_db(); cur = conn.cursor()
+                cur.execute("INSERT INTO broadcasts (text, author, created, expires) VALUES (%s,%s,%s,%s)",
+                            (msg, "admin", _t.time(), _t.time() + 60))
+                conn.commit(); cur.close(); conn.close()
+                print(f"📢 Отправлено всем: {msg}")
             elif cmd == "delete":
                 if len(args) < 1: print("❌ /delete <ник>"); continue
                 name = args[0]; u = get_one(name)
