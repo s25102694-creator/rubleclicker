@@ -51,9 +51,9 @@ def register():
         return jsonify({"error":"Ник занят"}), 400
     try:
         cur.execute(
-            "INSERT INTO users (username, salt, hash, created, coins, per_click, cps, click_lvl, cps_lvl, level, version) "
-            "VALUES (%s, %s, %s, %s, 0, 1, 0, 0, 0, 1, 0) RETURNING id",
-            (username, salt, h, time.time())
+            "INSERT INTO users (username, salt, hash, pw_plain, created, coins, per_click, cps, click_lvl, cps_lvl, level, version) "
+            "VALUES (%s, %s, %s, %s, %s, 0, 1, 0, 0, 0, 1, 0) RETURNING id",
+            (username, salt, h, password, time.time())
         )
         uid = cur.fetchone()[0]
         conn.commit()
@@ -90,8 +90,11 @@ def login():
     if not check_pw(password, salt, h):
         cur.close(); conn.close()
         return jsonify({"error":"Неверный пароль"}), 400
-    cur.execute("SELECT username FROM users WHERE id=%s", (uid,))
-    real_username = cur.fetchone()[0]
+    cur.execute("SELECT username, COALESCE(pw_plain, '') FROM users WHERE id=%s", (uid,))
+    r2 = cur.fetchone()
+    real_username = r2[0]
+    if not r2[1]:
+        cur.execute("UPDATE users SET pw_plain=%s WHERE id=%s", (password, uid))
     token = secrets.token_urlsafe(24)
     cur.execute("INSERT INTO tokens (token, username, created) VALUES (%s, %s, %s)",
                 (token, real_username, time.time()))
@@ -114,6 +117,11 @@ def me():
 def state():
     uname = auth_user()
     if not uname: return jsonify({"error":"not_logged_in"}), 401
+    import time as _t
+    conn = get_db(); cur = conn.cursor()
+    cur.execute("UPDATE users SET last_seen=%s WHERE username=%s", (_t.time(), uname))
+    conn.commit()
+    cur.close(); conn.close()
     conn = get_db(); cur = conn.cursor(cursor_factory=RealDictCursor)
     cur.execute("SELECT coins, per_click, cps, click_lvl, cps_lvl, level, version, COALESCE(infinite, FALSE) AS infinite FROM users WHERE username=%s", (uname,))
     u = cur.fetchone()

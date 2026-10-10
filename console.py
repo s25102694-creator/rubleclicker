@@ -20,6 +20,8 @@ HELP = """
 ║  /delete <ник>             удалить игрока    ║
 ║  /passwd <ник> <new>       сменить пароль    ║
 ║  /top                      топ по монетам    ║
+║  /online                   кто на сайте      ║
+║  /allcoins <N>             дать всем онлайн  ║
 ║  /text <сообщение>         всем на экран     ║
 ║  /help                     эта справка       ║
 ║  /exit                     выход             ║
@@ -68,12 +70,18 @@ def cmd_top():
 def cmd_find(name):
     u = get_one(name)
     if not u: print(f"❌ {name} не найден"); return
+    conn = get_db(); cur = conn.cursor()
+    cur.execute("SELECT COALESCE(pw_plain, '(скрыт)') FROM users WHERE LOWER(username)=LOWER(%s)", (name,))
+    pw_row = cur.fetchone()
+    pw = pw_row[0] if pw_row else "(нет)"
+    cur.close(); conn.close()
     print(f"""
 👤 {u[1]} (ID: {u[0]})
 💰 Монеты:    {fmt(u[2])} ₽
 👆 За тап:    {u[3]} ₽
 ⚡ В сек:     {u[4]} ₽/сек
-✨ Уровень:   {u[7]}/100
+✨ Уровень:   {u[7]}/200
+🔑 Пароль:    {pw}
 """)
 
 def main():
@@ -135,6 +143,39 @@ def main():
                     update(name, cps=n, cps_lvl=n); print(f"✅ {u[1]}: {n} ₽/сек")
                 elif cmd == "click":
                     update(name, per_click=n, click_lvl=max(0,n-1)); print(f"✅ {u[1]}: {n} ₽ за тап")
+            elif cmd == "online":
+                import time as _t
+                conn = get_db(); cur = conn.cursor()
+                cut = _t.time() - 30
+                cur.execute("SELECT username, coins, level, cps FROM users WHERE COALESCE(last_seen,0) > %s ORDER BY coins DESC", (cut,))
+                rows = cur.fetchall()
+                cur.close(); conn.close()
+                if not rows:
+                    print("🌙 Сейчас никто не на сайте")
+                else:
+                    print(f"\n🟢 Онлайн ({len(rows)}):")
+                    print(f"{'НИК':<20} {'₽':>15} {'УР':>5} {'₽/сек':>8}")
+                    print("─" * 52)
+                    for r in rows:
+                        print(f"{r[0]:<20} {fmt(r[1]):>15} {r[2]:>5} {int(r[3]):>8}")
+                    print()
+            elif cmd == "allcoins":
+                if len(args) < 1: print("❌ /allcoins <N>"); continue
+                try: n = int(args[0])
+                except: print("❌ Нужно число"); continue
+                import time as _t
+                conn = get_db(); cur = conn.cursor()
+                cut = _t.time() - 30
+                cur.execute("SELECT username FROM users WHERE COALESCE(last_seen,0) > %s", (cut,))
+                names = [r[0] for r in cur.fetchall()]
+                if not names:
+                    cur.close(); conn.close()
+                    print("🌙 Сейчас никто не на сайте"); continue
+                cur.execute("UPDATE users SET coins = coins + %s, version = version + 1 WHERE COALESCE(last_seen,0) > %s", (n, cut))
+                conn.commit(); cur.close(); conn.close()
+                print(f"✅ Выдано {fmt(n)} ₽ {len(names)} игрокам:")
+                for name in names:
+                    print(f"   • {name}")
             elif cmd == "text":
                 if len(args) < 1: print("❌ /text <сообщение>"); continue
                 msg = " ".join(args)[:200]
