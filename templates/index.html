@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="theme-color" content="#14141f">
+<title>Рублёвка</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; user-select:none; }
+html, body { height:100%; overflow:hidden; font-family:-apple-system,Roboto,sans-serif; touch-action:manipulation; }
+body { background: radial-gradient(ellipse at 50% 20%, #232340 0%, #14141f 70%); color:#fff; }
+
+/* AUTH */
+.auth { display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; padding:24px; }
+.auth-logo { font-size:72px; margin-bottom:12px; }
+.auth-title { font-size:28px; font-weight:800; margin-bottom:6px; color:#ffd75e; }
+.auth-sub { color:#8888aa; font-size:14px; margin-bottom:26px; text-align:center; }
+.auth-input { width:100%; max-width:340px; padding:14px 16px; margin-bottom:12px;
+  background:#242f3d; border:1px solid #2a2a44; border-radius:12px; color:#fff;
+  font-size:16px; outline:none; font-family:inherit; }
+.auth-input::placeholder { color:#708499; }
+.auth-input:focus { border-color:#4a5cf5; }
+.auth-btn { width:100%; max-width:340px; padding:15px; margin-top:8px;
+  background:linear-gradient(180deg,#4a5cf5,#3a48d0); color:#fff; border:none;
+  border-radius:12px; font-size:16px; font-weight:700; cursor:pointer; font-family:inherit; }
+.auth-btn:active { background:linear-gradient(180deg,#3f50d8,#3038b8); }
+.auth-btn:disabled { opacity:.6; cursor:not-allowed; }
+.auth-err { color:#e17076; margin-top:12px; font-size:14px; min-height:18px; text-align:center; max-width:340px; }
+.auth-switch { margin-top:20px; color:#4a5cf5; cursor:pointer; font-size:14px; font-weight:600; }
+
+/* GAME */
+.game { display:none; flex-direction:column; height:100%; }
+.game.active { display:flex; }
+
+.hud { padding:18px 20px 6px; text-align:center; position:relative; }
+.hud .user { position:absolute; top:14px; left:16px; font-size:13px; color:#8888aa; }
+.hud .user b { color:#ffd75e; }
+.hud .logout { position:absolute; top:12px; right:14px; color:#8888aa; font-size:20px; cursor:pointer; padding:4px 8px; }
+.balance { font-size:36px; font-weight:800; letter-spacing:.5px; color:#ffd75e;
+  text-shadow: 0 2px 10px rgba(255,200,60,.35); }
+.balance .ruble { font-size:30px; margin-right:4px; opacity:.9; }
+.cps { margin-top:4px; color:#8888aa; font-size:14px; }
+
+.coin-area { flex:1; display:flex; flex-direction:column; align-items:center;
+  justify-content:center; perspective:1200px; padding:10px; position:relative; }
+.coin-wrap { width:230px; height:230px; display:flex; align-items:center; justify-content:center; }
+.coin { width:210px; height:210px; border-radius:50%; display:flex; align-items:center;
+  justify-content:center; cursor:pointer; transform-style:preserve-3d;
+  background: radial-gradient(circle at 32% 28%, var(--c1,#b07a4a), var(--c2,#6d4525) 62%, var(--c3,#3a2410) 100%);
+  box-shadow: inset 0 -8px 20px rgba(0,0,0,.4), inset 0 6px 14px rgba(255,255,255,.15),
+              0 10px 28px rgba(0,0,0,.6), 0 0 0 5px var(--ring,#5a3a1a),
+              0 0 var(--glow,0) var(--glow-color,transparent);
+  position:relative; overflow:hidden; will-change:transform; transition: box-shadow .3s; }
+.coin::before { content:"₽"; position:absolute; font-size:96px; font-weight:900;
+  color: rgba(255,255,255,var(--sym,.18)); text-shadow: 0 3px 8px rgba(0,0,0,.4);
+  font-family: Georgia, serif; pointer-events:none; transition: color .3s; }
+.coin::after { content:""; position:absolute; top:8%; left:15%; width:70%; height:40%;
+  background: linear-gradient(180deg, rgba(255,255,255,var(--hl,.35)), rgba(255,255,255,0));
+  border-radius:50%; filter:blur(4px); pointer-events:none; }
+.coin.rainbow { background: conic-gradient(from 0deg, #ff5577, #ffaa33, #ffee55,
+  #55ee88, #55bbff, #aa66ff, #ff5577) !important;
+  --glow-color:#ffcc55; --glow:50px; --sym:.5; --hl:.5;
+  animation: rainbow-glow 2.5s ease-in-out infinite; }
+@keyframes rainbow-glow { 0%,100%{filter:brightness(1);} 50%{filter:brightness(1.3);} }
+.coin.tapping { animation: tap-coin .5s cubic-bezier(.4,0,.2,1); }
+@keyframes tap-coin {
+  0%   { transform: scale(1) rotateY(0deg); }
+  20%  { transform: scale(.88) rotateY(90deg); }
+  55%  { transform: scale(.94) rotateY(200deg); }
+  80%  { transform: scale(1.06) rotateY(340deg); }
+  100% { transform: scale(1) rotateY(360deg); }
+}
+.level-info { margin-top:20px; text-align:center; }
+.level-text { font-size:16px; font-weight:600; color:#ccd; }
+.level-text .num { color:#ffd75e; }
+.progress-bar { width:220px; height:6px; background:#2a2a40; border-radius:3px;
+  margin:8px auto 0; overflow:hidden; }
+.progress-fill { height:100%; background:linear-gradient(90deg,#ff9040,#ffd75e);
+  width:0%; border-radius:3px; transition:width .3s; }
+.float { position:absolute; color:#ffd75e; font-weight:800; font-size:26px;
+  pointer-events:none; animation: float-up .9s ease-out forwards;
+  text-shadow: 0 2px 10px rgba(255,215,90,.7), 0 0 4px #000; z-index:20; }
+@keyframes float-up {
+  0%   { opacity:1; transform: translate(-50%,0) scale(.6); }
+  20%  { transform: translate(-50%,-10px) scale(1.15); }
+  100% { opacity:0; transform: translate(-50%,-90px) scale(1.1); }
+}
+.shop-btn-wrap { padding:10px 16px 16px; flex-shrink:0; }
+.shop-btn { width:100%; padding:16px; background:linear-gradient(180deg,#4a5cf5,#3a48d0);
+  border:none; border-radius:16px; color:#fff; font-size:17px; font-weight:700;
+  font-family:inherit; cursor:pointer; box-shadow: 0 6px 18px rgba(74,92,245,.4);
+  position:relative; touch-action:manipulation; }
+.shop-btn:active { transform:scale(.98); }
+.shop-btn .badge { position:absolute; top:-6px; right:-6px; background:#ff3b30;
+  color:#fff; font-size:13px; padding:2px 8px; border-radius:11px; font-weight:700; }
+
+/* MODAL */
+.modal-bg { position:fixed; inset:0; background:rgba(0,0,0,.7); display:flex;
+  align-items:flex-end; justify-content:center; z-index:100; animation: fade .2s; }
+@keyframes fade { from{opacity:0} to{opacity:1} }
+@keyframes slide-up { from{transform:translateY(100%)} to{transform:translateY(0)} }
+.modal-sheet { width:100%; max-width:480px; background:#1c1c2e; border-radius:22px 22px 0 0;
+  padding:18px 16px 24px; animation: slide-up .25s ease-out; max-height:80vh;
+  overflow-y:auto; -webkit-overflow-scrolling:touch; }
+.modal-sheet .handle { width:40px; height:4px; background:#3a3a55; border-radius:2px;
+  margin:0 auto 14px; }
+.modal-sheet h3 { text-align:center; font-size:19px; margin-bottom:16px; }
+.up-row { display:flex; align-items:center; padding:12px; background:#252540;
+  border-radius:14px; margin-bottom:10px; gap:12px; cursor:pointer;
+  transition: transform .1s, background .15s, opacity .2s;
+  border:1px solid #2a2a44; touch-action:manipulation; }
+.up-row:active:not(.disabled) { transform: scale(.97); background:#2d2d4a; }
+.up-row.disabled { opacity:.45; cursor:not-allowed; }
+.up-row.flash { background:#2d5a3a; border-color:#4a8f5a; }
+.up-row * { pointer-events: none; }
+.up-row .up-icon { width:48px; height:48px; border-radius:12px; display:flex;
+  align-items:center; justify-content:center; font-size:24px; flex-shrink:0;
+  background:linear-gradient(135deg,#3a3a66,#252545); }
+.up-row .up-body { flex:1; min-width:0; }
+.up-row .up-name { font-size:15px; font-weight:600; }
+.up-row .up-desc { font-size:12px; color:#8888aa; margin-top:2px; }
+.up-row .up-lvl { font-size:11px; color:#ffd75e; margin-top:2px; }
+.up-row .up-cost { font-size:14px; font-weight:700; color:#ffd75e; text-align:right; flex-shrink:0; }
+.up-row .up-cost.off { color:#e17076; }
+.toast { position:fixed; bottom:100px; left:50%; transform:translateX(-50%);
+  background:#2a2a44; padding:10px 18px; border-radius:20px; font-size:13px;
+  color:#fff; opacity:0; transition:opacity .3s; pointer-events:none; z-index:200; }
+.toast.show { opacity:1; }
+::-webkit-scrollbar { width:4px; }
+::-webkit-scrollbar-thumb { background:#4a4a6a; border-radius:2px; }
+</style>
+</head>
+<body>
+
+<!-- AUTH -->
+<div class="auth" id="authScreen">
+  <div class="auth-logo">💰</div>
+  <div class="auth-title">Рублёвка</div>
+  <div class="auth-sub" id="authSub">Войди или создай аккаунт</div>
+  <input class="auth-input" id="authUser" placeholder="Ник (без пробелов)" autocomplete="username" maxlength="20">
+  <input class="auth-input" id="authPass" type="password" placeholder="Пароль" autocomplete="current-password">
+  <button class="auth-btn" id="authBtn">Войти</button>
+  <div class="auth-err" id="authErr"></div>
+  <div class="auth-switch" id="authSwitch">Создать аккаунт</div>
+</div>
+
+<!-- GAME -->
+<div class="game" id="gameScreen">
+  <div class="hud" id="hud">
+    <div class="user">👤 <b id="hudUser">...</b></div>
+    <div class="logout" id="btnLogout">⏻</div>
+    <div class="balance"><span class="ruble">₽</span><span id="coins">0</span></div>
+    <div class="cps"><span id="cpsText">0</span> ₽/сек</div>
+  </div>
+  <div class="coin-area" id="coinArea">
+    <div class="coin-wrap"><div class="coin" id="coin"></div></div>
+    <div class="level-info">
+      <div class="level-text">Уровень <span class="num" id="levelNum">1</span> / 100</div>
+      <div class="progress-bar"><div class="progress-fill" id="progress"></div></div>
+    </div>
+  </div>
+  <div class="shop-btn-wrap">
+    <button class="shop-btn" id="btnShop">🛒 МАГАЗИН<span class="badge" id="shopBadge" style="display:none">!</span></button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<script>
+(function(){
+'use strict';
+
+const STAGES = [
+  {c1:"#6b5a3f", c2:"#3a2f1e", c3:"#1a1510", ring:"#2a2218", sym:.15, hl:.20},
+  {c1:"#8a6a48", c2:"#503820", c3:"#281a10", ring:"#3a2a18", sym:.17, hl:.25},
+  {c1:"#a07048", c2:"#6d4525", c3:"#3a2410", ring:"#4a2e15", sym:.18, hl:.28},
+  {c1:"#b87c50", c2:"#7c5028", c3:"#482c14", ring:"#5a3a1c", sym:.20, hl:.30},
+  {c1:"#cc8858", c2:"#8b5028", c3:"#5a3010", ring:"#6a3e18", sym:.22, hl:.32},
+  {c1:"#d4a060", c2:"#9a6830", c3:"#604018", ring:"#7a4e20", sym:.22, hl:.34},
+  {c1:"#e0a060", c2:"#a06020", c3:"#603810", ring:"#8a5020", sym:.24, hl:.36},
+  {c1:"#c8c8d0", c2:"#8888a0", c3:"#484858", ring:"#686880", sym:.25, hl:.38},
+  {c1:"#d8d8e0", c2:"#9898a8", c3:"#585870", ring:"#787890", sym:.26, hl:.40},
+  {c1:"#f0f0f8", c2:"#b0b0c8", c3:"#606078", ring:"#909098", sym:.28, hl:.45},
+  {c1:"#ffe066", c2:"#d4a017", c3:"#8b6914", ring:"#c09010", sym:.30, hl:.45},
+  {c1:"#ffd700", c2:"#b8860b", c3:"#78540a", ring:"#d0a020", sym:.32, hl:.48},
+  {c1:"#ffe880", c2:"#e0b020", c3:"#9a7010", ring:"#e0b020", sym:.34, hl:.50, glow:25, gc:"#e0b020aa"},
+  {c1:"#fff0a0", c2:"#f0c030", c3:"#a08020", ring:"#f0c030", sym:.36, hl:.52, glow:40, gc:"#f0c030"},
+  {c1:"#ffee55", c2:"#e0a000", c3:"#a07000", ring:"#f0b020", sym:.38, hl:.54, glow:50, gc:"#f0c020"},
+  {c1:"#f8e0c0", c2:"#d0a060", c3:"#806030", ring:"#e0b880", sym:.40, hl:.55, glow:55, gc:"#e8c890"},
+  {c1:"#d0f0ff", c2:"#60b8e8", c3:"#2060a0", ring:"#a0d8f0", sym:.45, hl:.60, glow:60, gc:"#a0d8ff"},
+  {c1:"#e0c0ff", c2:"#a060e8", c3:"#6028a8", ring:"#c090f0", sym:.48, hl:.62, glow:65, gc:"#c090ff"},
+  {c1:"#ffb0b0", c2:"#e03060", c3:"#801030", ring:"#ff5070", sym:.52, hl:.65, glow:75, gc:"#ff5070"},
+  {rainbow:true}
+];
+const stageForLevel = lvl => Math.min(20, Math.floor((Math.max(1,Math.min(100,lvl))-1)/5));
+
+const defaults = () => ({coins:0, perClick:1, cps:0, clickLvl:0, cpsLvl:0, level:1, version:0});
+
+let S = defaults();
+let token = localStorage.getItem("ruble_token") || "";
+let username = localStorage.getItem("ruble_user") || "";
+let dirty = false;
+let authMode = "login";
+
+const el = {
+  auth: document.getElementById("authScreen"),
+  game: document.getElementById("gameScreen"),
+  authUser: document.getElementById("authUser"),
+  authPass: document.getElementById("authPass"),
+  authBtn: document.getElementById("authBtn"),
+  authErr: document.getElementById("authErr"),
+  authSwitch: document.getElementById("authSwitch"),
+  authSub: document.getElementById("authSub"),
+  hudUser: document.getElementById("hudUser"),
+  coins: document.getElementById("coins"),
+  cpsText: document.getElementById("cpsText"),
+  coin: document.getElementById("coin"),
+  coinArea: document.getElementById("coinArea"),
+  levelNum: document.getElementById("levelNum"),
+  progress: document.getElementById("progress"),
+  shop: document.getElementById("btnShop"),
+  badge: document.getElementById("shopBadge"),
+  toast: document.getElementById("toast"),
+};
+
+function api(url, opts={}){
+  opts.headers = Object.assign({"Content-Type":"application/json"}, opts.headers||{});
+  if (token) opts.headers["Authorization"] = "Bearer " + token;
+  return fetch(url, opts).then(r => r.json().then(j => ({status:r.status, data:j})));
+}
+
+function fmt(n){
+  n = Math.floor(n);
+  if (n < 1e6) return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+  if (n < 1e9) return (n/1e6).toFixed(n<1e7?2:1).replace(/\.0+$/,"") + "M";
+  if (n < 1e12) return (n/1e9).toFixed(2).replace(/\.0+$/,"") + "B";
+  if (n < 1e15) return (n/1e12).toFixed(2).replace(/\.0+$/,"") + "T";
+  return (n/1e15).toFixed(2) + "Q";
+}
+
+const costClick = () => Math.floor(10 * Math.pow(1.25, S.clickLvl));
+const costCps   = () => Math.floor(100 * Math.pow(1.25, S.cpsLvl));
+const costLevel = () => Math.floor(50 * Math.pow(S.level, 1.5)) + 50;
+
+function applyStage(st){
+  const c = el.coin;
+  if (st.rainbow){
+    c.classList.add("rainbow");
+    ["--c1","--c2","--c3","--ring","--glow","--glow-color"].forEach(k => c.style.removeProperty(k));
+    c.style.setProperty("--sym", .55);
+    c.style.setProperty("--hl", .55);
+  } else {
+    c.classList.remove("rainbow");
+    c.style.setProperty("--c1", st.c1);
+    c.style.setProperty("--c2", st.c2);
+    c.style.setProperty("--c3", st.c3);
+    c.style.setProperty("--ring", st.ring);
+    c.style.setProperty("--sym", st.sym || .2);
+    c.style.setProperty("--hl", st.hl || .3);
+    if (st.glow){ c.style.setProperty("--glow", st.glow + "px"); c.style.setProperty("--glow-color", st.gc); }
+    else { c.style.setProperty("--glow", "0px"); c.style.setProperty("--glow-color", "transparent"); }
+  }
+}
+
+function render(){
+  el.coins.textContent = fmt(S.coins);
+  el.cpsText.textContent = fmt(S.cps);
+  el.levelNum.textContent = S.level;
+  el.progress.style.width = (((S.level-1)%5)+1) * 20 + "%";
+  applyStage(STAGES[stageForLevel(S.level)]);
+  const canBuy = S.coins >= costClick() || S.coins >= costCps() || (S.level < 100 && S.coins >= costLevel());
+  el.badge.style.display = canBuy ? "inline-block" : "none";
+}
+
+function floatText(text, x, y){
+  const f = document.createElement("div");
+  f.className = "float"; f.textContent = text;
+  const r = el.coinArea.getBoundingClientRect();
+  f.style.left = (x - r.left) + "px";
+  f.style.top  = (y - r.top) + "px";
+  el.coinArea.appendChild(f);
+  setTimeout(()=>f.remove(), 900);
+}
+
+function doClick(x, y){
+  S.coins += S.perClick;
+  dirty = true;
+  el.coin.classList.remove("tapping");
+  void el.coin.offsetWidth;
+  el.coin.classList.add("tapping");
+  if (x != null) floatText("+" + fmt(S.perClick) + " ₽", x, y);
+  if (navigator.vibrate) navigator.vibrate(8);
+  render();
+}
+
+function toast(t){
+  el.toast.textContent = t;
+  el.toast.classList.add("show");
+  clearTimeout(toast._t);
+  toast._t = setTimeout(()=>el.toast.classList.remove("show"), 1400);
+}
+
+el.coin.addEventListener("pointerdown", e => {
+  e.preventDefault();
+  const r = e.target.getBoundingClientRect();
+  doClick(e.clientX || (r.left+r.width/2), e.clientY || (r.top+r.height/2));
+});
+
+/* ---- AUTH ---- */
+function setAuthMode(m){
+  authMode = m;
+  if (m === "login"){
+    el.authBtn.textContent = "Войти";
+    el.authSwitch.textContent = "Создать аккаунт";
+    el.authSub.textContent = "Войди в свой аккаунт";
+  } else {
+    el.authBtn.textContent = "Создать аккаунт";
+    el.authSwitch.textContent = "У меня уже есть аккаунт";
+    el.authSub.textContent = "Придумай ник и пароль";
+  }
+  el.authErr.textContent = "";
+}
+el.authSwitch.onclick = () => setAuthMode(authMode === "login" ? "register" : "login");
+
+async function doAuth(){
+  const u = el.authUser.value.trim();
+  const p = el.authPass.value;
+  el.authErr.textContent = "";
+  if (!u || !p){ el.authErr.textContent = "Заполни все поля"; return; }
+  el.authBtn.disabled = true;
+  const url = authMode === "login" ? "/api/login" : "/api/register";
+  const {data} = await api(url, {method:"POST", body: JSON.stringify({username:u, password:p})});
+  el.authBtn.disabled = false;
+  if (data.error){ el.authErr.textContent = data.error; return; }
+  token = data.token;
+  username = data.username;
+  localStorage.setItem("ruble_token", token);
+  localStorage.setItem("ruble_user", username);
+  await enterGame();
+}
+el.authBtn.onclick = doAuth;
+el.authPass.addEventListener("keypress", e => { if (e.key === "Enter") doAuth(); });
+
+document.getElementById("btnLogout").onclick = async () => {
+  if (!confirm("Выйти?")) return;
+  await api("/api/logout", {method:"POST"});
+  localStorage.removeItem("ruble_token");
+  localStorage.removeItem("ruble_user");
+  token = ""; username = "";
+  el.game.classList.remove("active");
+  el.auth.style.display = "flex";
+  setAuthMode("login");
+};
+
+/* ---- GAME SYNC ---- */
+async function fetchState(){
+  if (!token) return;
+  const {status, data} = await api("/api/state");
+  if (status === 401){ logoutLocal(); return; }
+  if (!data.error && !dirty && (data.version||0) > (S.version||0)){
+    S = Object.assign(defaults(), data);
+    render();
+  }
+}
+let pushing = false;
+async function pushState(){
+  if (!token || !dirty || pushing) return;
+  pushing = true;
+  dirty = false;
+  try {
+    const {status, data} = await api("/api/save", {
+      method:"POST",
+      body: JSON.stringify({
+        coins: S.coins, perClick: S.perClick, cps: S.cps,
+        clickLvl: S.clickLvl, cpsLvl: S.cpsLvl, level: S.level,
+        version: S.version
+      })
+    });
+    if (status === 401){ logoutLocal(); return; }
+    if (data.conflict){ await fetchState(); }
+    else if (data.version){ S.version = data.version; }
+  } catch(e){
+    dirty = true;
+  } finally {
+    pushing = false;
+  }
+}
+function logoutLocal(){
+  localStorage.removeItem("ruble_token");
+  localStorage.removeItem("ruble_user");
+  token = ""; username = "";
+  el.game.classList.remove("active");
+  el.auth.style.display = "flex";
+  setAuthMode("login");
+}
+
+async function enterGame(){
+  el.auth.style.display = "none";
+  el.game.classList.add("active");
+  el.hudUser.textContent = username;
+  const {data} = await api("/api/state");
+  if (data.error){ logoutLocal(); return; }
+  S = Object.assign(defaults(), data);
+  render();
+}
+
+/* ---- SHOP ---- */
+function openShop(){
+  const bg = document.createElement("div");
+  bg.className = "modal-bg";
+  bg.innerHTML = `
+    <div class="modal-sheet" id="shopSheet">
+      <div class="handle"></div>
+      <h3>🛒 Магазин</h3>
+      <div class="up-row" id="up-click" data-act="click">
+        <div class="up-icon">👆</div>
+        <div class="up-body">
+          <div class="up-name">Улучшить клик</div>
+          <div class="up-desc">+1 ₽ к тапу</div>
+          <div class="up-lvl" id="lvl-click"></div>
+        </div>
+        <div class="up-cost" id="c-click"></div>
+      </div>
+      <div class="up-row" id="up-cps" data-act="cps">
+        <div class="up-icon">⚡</div>
+        <div class="up-body">
+          <div class="up-name">Доход в секунду</div>
+          <div class="up-desc">+1 ₽/сек автоматически</div>
+          <div class="up-lvl" id="lvl-cps"></div>
+        </div>
+        <div class="up-cost" id="c-cps"></div>
+      </div>
+      <div class="up-row" id="up-level" data-act="level">
+        <div class="up-icon">✨</div>
+        <div class="up-body">
+          <div class="up-name">Полировать монету</div>
+          <div class="up-desc">Монета выглядит дороже</div>
+          <div class="up-lvl" id="lvl-text"></div>
+        </div>
+        <div class="up-cost" id="c-level"></div>
+      </div>
+    </div>`;
+  document.body.appendChild(bg);
+
+  function refresh(){
+    document.getElementById("lvl-click").innerHTML = `Ур. ${S.clickLvl} · сейчас +${S.perClick} ₽`;
+    document.getElementById("lvl-cps").innerHTML = `Ур. ${S.cpsLvl} · сейчас ${S.cps} ₽/сек`;
+    const st = stageForLevel(S.level)+1;
+    const toNext = S.level>=100 ? 0 : 5 - ((S.level-1)%5) - 1;
+    document.getElementById("lvl-text").innerHTML = `Ур. ${S.level}/100 · стадия ${st}/20 · ${S.level>=100?"МАКС":`до новой: ${toNext}`}`;
+    const cc = costClick(), cp = costCps(), cl = costLevel();
+    document.getElementById("c-click").textContent = fmt(cc) + " ₽";
+    document.getElementById("c-cps").textContent   = fmt(cp) + " ₽";
+    document.getElementById("c-level").textContent = S.level >= 100 ? "MAX" : fmt(cl) + " ₽";
+    document.getElementById("up-click").classList.toggle("disabled", S.coins < cc);
+    document.getElementById("up-cps").classList.toggle("disabled", S.coins < cp);
+    document.getElementById("up-level").classList.toggle("disabled", S.level >= 100 || S.coins < cl);
+    document.getElementById("c-click").classList.toggle("off", S.coins < cc);
+    document.getElementById("c-cps").classList.toggle("off", S.coins < cp);
+    document.getElementById("c-level").classList.toggle("off", S.level < 100 && S.coins < cl);
+  }
+
+  const sheet = document.getElementById("shopSheet");
+  sheet.addEventListener("pointerdown", e => {
+    const row = e.target.closest(".up-row");
+    if (!row) return;
+    e.preventDefault(); e.stopPropagation();
+    if (row.classList.contains("disabled")){ toast("Не хватает ₽"); return; }
+    const act = row.dataset.act;
+    if (act === "click"){
+      const c = costClick();
+      if (S.coins < c) return toast("Не хватает ₽");
+      S.coins -= c; S.clickLvl++; S.perClick++; dirty = true;
+    } else if (act === "cps"){
+      const c = costCps();
+      if (S.coins < c) return toast("Не хватает ₽");
+      S.coins -= c; S.cpsLvl++; S.cps++; dirty = true;
+    } else if (act === "level"){
+      if (S.level >= 100) return toast("Максимум!");
+      const c = costLevel();
+      if (S.coins < c) return toast("Не хватает ₽");
+      S.coins -= c; S.level++; S.perClick++; dirty = true;
+      if (S.level === 100) toast("🏆 ЛЕГЕНДАРНАЯ МОНЕТА!");
+    }
+    row.classList.add("flash");
+    setTimeout(()=>row.classList.remove("flash"), 180);
+    if (navigator.vibrate) navigator.vibrate(6);
+    render(); refresh();
+  });
+
+  bg.addEventListener("pointerdown", e => { if (e.target === bg) bg.remove(); });
+  refresh();
+}
+el.shop.addEventListener("pointerdown", e => { e.preventDefault(); openShop(); });
+
+/* ---- TICK ---- */
+setInterval(() => {
+  if (S.cps > 0 && el.game.classList.contains("active")){
+    S.coins += S.cps * 0.1; dirty = true; render();
+  }
+}, 100);
+setInterval(pushState, 1500);
+setInterval(fetchState, 3000);
+window.addEventListener("beforeunload", () => { if (dirty) pushState(); });
+
+/* ---- INIT ---- */
+(async () => {
+  if (token){
+    const {data} = await api("/api/me");
+    if (data.ok){ username = data.username; await enterGame(); return; }
+    logoutLocal();
+  }
+  el.auth.style.display = "flex";
+  setAuthMode("login");
+})();
+})();
+</script>
+</body>
+</html>
