@@ -273,6 +273,14 @@ body { background: radial-gradient(ellipse at 50% 20%, #232340 0%, #14141f 70%);
   <div>ТОП</div>
 </div>
 
+<div class="broadcast-banner" id="broadcastBanner">
+  <div class="b-icon">📢</div>
+  <div class="b-text" id="broadcastText"></div>
+  <div class="b-close" id="broadcastClose">×</div>
+</div>
+
+<button class="casino-btn" id="btnCasino">🎰</button>
+
 <div class="toast" id="toast"></div>
 <script>
 (function(){
@@ -339,6 +347,10 @@ const el = {
   badge: document.getElementById("shopBadge"),
   topBtn: document.getElementById("btnTop"),
   unionBtn: document.getElementById("btnUnion"),
+  casinoBtn: document.getElementById("btnCasino"),
+  broadcastBanner: document.getElementById("broadcastBanner"),
+  broadcastText: document.getElementById("broadcastText"),
+  broadcastClose: document.getElementById("broadcastClose"),
   toast: document.getElementById("toast"),
 };
 
@@ -481,6 +493,7 @@ function logoutLocal(){
   el.game.classList.remove("active");
   el.topBtn.classList.remove("active");
   el.unionBtn.classList.remove("active");
+  el.casinoBtn.classList.remove("active");
   el.auth.style.display = "flex";
   setAuthMode("login");
 }
@@ -490,11 +503,13 @@ async function enterGame(){
   el.game.classList.add("active");
   el.topBtn.classList.add("active");
   el.unionBtn.classList.add("active");
+  el.casinoBtn.classList.add("active");
   el.hudUser.textContent = username;
   const {data} = await api("/api/state");
   if (data.error){ logoutLocal(); return; }
   S = Object.assign(defaults(), data);
   render();
+  pollBroadcast();
 }
 
 /* ---- SYNC ---- */
@@ -538,6 +553,11 @@ function openShop(){
     <div class="modal-sheet bottom" id="shopSheet">
       <span class="modal-close" id="shopClose">×</span>
       <h3>🛒 Магазин</h3>
+      <div class="shop-tabs">
+        <div class="shop-tab active" data-tab="upgrades">Улучшения</div>
+        <div class="shop-tab" data-tab="skins">Скины</div>
+      </div>
+      <div id="shopUpgrades">
       <div class="up-row" id="up-click" data-act="click">
         <div class="up-icon">👆</div>
         <div class="up-body">
@@ -565,6 +585,8 @@ function openShop(){
         </div>
         <div class="up-cost" id="c-level"></div>
       </div>
+      </div>
+      <div id="shopSkins" style="display:none"><div id="skinsList"></div></div>
     </div>`;
   document.body.appendChild(bg);
 
@@ -589,6 +611,10 @@ function openShop(){
   }
 
   document.getElementById("shopClose").onclick = () => bg.remove();
+
+  bg.querySelectorAll(".shop-tab").forEach(t => {
+    t.onclick = () => shopTabSwitch(bg, t.dataset.tab);
+  });
 
   const sheet = document.getElementById("shopSheet");
   sheet.addEventListener("pointerdown", e => {
@@ -943,6 +969,226 @@ function openUnionCreate(){
   };
 }
 
+/* ---- BROADCAST ---- */
+let lastBroadcastId = null;
+async function pollBroadcast(){
+  if (!token || !el.game.classList.contains("active")) return;
+  try {
+    const {data} = await api("/api/broadcast");
+    if (data.broadcast && data.broadcast.id !== lastBroadcastId){
+      lastBroadcastId = data.broadcast.id;
+      el.broadcastText.textContent = data.broadcast.text;
+      el.broadcastBanner.classList.add("show");
+      if (navigator.vibrate) navigator.vibrate([50, 50, 50]);
+    }
+  } catch(e){}
+}
+el.broadcastClose.onclick = () => el.broadcastBanner.classList.remove("show");
+
+/* ---- CASINO ---- */
+let casinoTab = "coin";
+function openCasino(){
+  const bg = document.createElement("div");
+  bg.className = "modal-bg";
+  bg.innerHTML = `
+    <div class="casino-modal">
+      <span class="modal-close" id="casClose">×</span>
+      <h3>🎰 КАЗИНО</h3>
+      <div class="casino-balance">Баланс: <b id="casBal">${S.infinite ? "∞" : fmt(S.coins) + " ₽"}</b></div>
+      <div class="casino-tabs">
+        <div class="casino-tab ${casinoTab==='coin'?'active':''}" data-tab="coin">🪙 Монетка</div>
+        <div class="casino-tab ${casinoTab==='dice'?'active':''}" data-tab="dice">🎲 Кости</div>
+      </div>
+
+      <div class="casino-section ${casinoTab==='coin'?'active':''}" data-sec="coin">
+        <div class="casino-coin" id="casCoin">₽</div>
+        <input class="casino-input" id="casBet" placeholder="Ставка" inputmode="numeric">
+        <div class="casino-quick">
+          <button data-q="100">100</button>
+          <button data-q="1000">1K</button>
+          <button data-q="10000">10K</button>
+          <button data-q="all">ВСЁ</button>
+        </div>
+        <button class="casino-action flip" id="casHeads">🟡 Орёл (x2)</button>
+        <button class="casino-action flip" id="casTails">⚪ Решка (x2)</button>
+        <div class="casino-result" id="casResCoin"></div>
+      </div>
+
+      <div class="casino-section ${casinoTab==='dice'?'active':''}" data-sec="dice">
+        <div class="casino-dice" id="casDice">⚀</div>
+        <input class="casino-input" id="diceBet" placeholder="Ставка" inputmode="numeric">
+        <div class="casino-quick">
+          <button data-q2="100">100</button>
+          <button data-q2="1000">1K</button>
+          <button data-q2="10000">10K</button>
+          <button data-q2="all2">ВСЁ</button>
+        </div>
+        <button class="casino-action coin" id="diceRoll">🎲 Бросить кубик</button>
+        <div style="text-align:center;color:#8888aa;font-size:12px;margin-top:8px">
+          6 — x3 &nbsp;·&nbsp; 5 — x2 &nbsp;·&nbsp; 4 — возврат &nbsp;·&nbsp; 1-3 — проигрыш
+        </div>
+        <div class="casino-result" id="casResDice"></div>
+      </div>
+    </div>`;
+  document.body.appendChild(bg);
+  const closeMe = () => bg.remove();
+  document.getElementById("casClose").onclick = closeMe;
+  bg.addEventListener("pointerdown", e => { if (e.target === bg) closeMe(); });
+
+  // табы
+  bg.querySelectorAll(".casino-tab").forEach(t => {
+    t.onclick = () => {
+      casinoTab = t.dataset.tab;
+      bg.querySelectorAll(".casino-tab").forEach(x => x.classList.toggle("active", x.dataset.tab === casinoTab));
+      bg.querySelectorAll(".casino-section").forEach(x => x.classList.toggle("active", x.dataset.sec === casinoTab));
+    };
+  });
+
+  // быстрые кнопки
+  bg.querySelectorAll("[data-q]").forEach(b => {
+    b.onclick = () => {
+      const v = b.dataset.q;
+      document.getElementById("casBet").value = v === "all" ? Math.floor(S.coins) : v;
+    };
+  });
+  bg.querySelectorAll("[data-q2]").forEach(b => {
+    b.onclick = () => {
+      const v = b.dataset.q2;
+      document.getElementById("diceBet").value = v === "all2" ? Math.floor(S.coins) : v;
+    };
+  });
+
+  const updBal = () => {
+    document.getElementById("casBal").textContent = S.infinite ? "∞" : fmt(S.coins) + " ₽";
+  };
+
+  // МОНЕТКА
+  const flip = async (choice) => {
+    const betStr = document.getElementById("casBet").value.trim();
+    const bet = parseInt(betStr);
+    if (!bet || bet <= 0) return toast("Введи ставку");
+    if (!S.infinite && bet > S.coins) return toast("Не хватает монет");
+    const coin = document.getElementById("casCoin");
+    coin.classList.remove("flipping");
+    void coin.offsetWidth;
+    coin.classList.add("flipping");
+    const res = document.getElementById("casResCoin");
+    res.style.display = "none";
+
+    const {data} = await api("/api/casino/flip", {method:"POST", body: JSON.stringify({bet, choice})});
+    setTimeout(() => {
+      if (data.error){ toast(data.error); return; }
+      coin.textContent = data.result === "heads" ? "🟡" : "⚪";
+      if (data.win){
+        S.coins += data.bet; dirty = true;
+        res.textContent = "🎉 ПОБЕДА! +" + fmt(data.bet) + " ₽";
+        res.className = "casino-result win";
+      } else {
+        if (!S.infinite) S.coins -= data.bet;
+        dirty = true;
+        res.textContent = "😔 Проигрыш -" + fmt(data.bet) + " ₽";
+        res.className = "casino-result lose";
+      }
+      res.style.display = "block";
+      render(); updBal();
+    }, 1000);
+  };
+  document.getElementById("casHeads").onclick = () => flip("heads");
+  document.getElementById("casTails").onclick = () => flip("tails");
+
+  // КОСТИ
+  document.getElementById("diceRoll").onclick = async () => {
+    const betStr = document.getElementById("diceBet").value.trim();
+    const bet = parseInt(betStr);
+    if (!bet || bet <= 0) return toast("Введи ставку");
+    if (!S.infinite && bet > S.coins) return toast("Не хватает монет");
+    const dice = document.getElementById("casDice");
+    dice.classList.remove("rolling");
+    void dice.offsetWidth;
+    dice.classList.add("rolling");
+    const res = document.getElementById("casResDice");
+    res.style.display = "none";
+
+    const {data} = await api("/api/casino/dice", {method:"POST", body: JSON.stringify({bet})});
+    setTimeout(() => {
+      if (data.error){ toast(data.error); return; }
+      const faces = {1:"⚀",2:"⚁",3:"⚂",4:"⚃",5:"⚄",6:"⚅"};
+      dice.textContent = faces[data.roll];
+      const delta = data.bet * data.mult - data.bet;
+      if (!S.infinite) S.coins += delta;
+      dirty = true;
+      if (data.mult > 1){
+        res.textContent = "Выпало " + data.roll + " — x" + data.mult + "! +" + fmt(delta) + " ₽";
+        res.className = "casino-result win";
+      } else if (data.mult === 1){
+        res.textContent = "Выпало " + data.roll + " — возврат ставки";
+        res.className = "casino-result win";
+      } else {
+        res.textContent = "Выпало " + data.roll + " — -" + fmt(data.bet) + " ₽";
+        res.className = "casino-result lose";
+      }
+      res.style.display = "block";
+      render(); updBal();
+    }, 800);
+  };
+}
+el.casinoBtn.onclick = openCasino;
+
+/* ---- SKINS IN SHOP ---- */
+function shopTabSwitch(bg, tab){
+  bg.querySelectorAll(".shop-tab").forEach(x => x.classList.toggle("active", x.dataset.tab === tab));
+  document.getElementById("shopUpgrades").style.display = tab === "upgrades" ? "block" : "none";
+  document.getElementById("shopSkins").style.display = tab === "skins" ? "block" : "none";
+  if (tab === "skins") loadSkins(bg);
+}
+
+async function loadSkins(bg){
+  const el = document.getElementById("skinsList");
+  if (!el) return;
+  el.innerHTML = `<div class="loading">Загрузка...</div>`;
+  const {data} = await api("/api/skins");
+  if (data.error){ el.innerHTML = `<div class="loading">Ошибка</div>`; return; }
+  const {my_skin, owned, catalog} = data;
+  const ids = Object.keys(catalog);
+  el.innerHTML = `<div class="skins-grid">` + ids.map(id => {
+    const sk = catalog[id];
+    const isOwned = owned.includes(id);
+    const isSel = my_skin === id;
+    let priceHtml;
+    if (isSel) priceHtml = `<div class="skin-price selected-tag">✓ Выбран</div>`;
+    else if (isOwned) priceHtml = `<div class="skin-price owned-tag">Куплен</div>`;
+    else priceHtml = `<div class="skin-price">${fmt(sk.price)} ₽</div>`;
+    return `<div class="skin-card ${isOwned?'owned':''} ${isSel?'selected':''}" data-skin="${id}">
+      <div class="skin-preview skin-${id}">₽</div>
+      <div class="skin-name">${sk.emoji} ${sk.name}</div>
+      ${priceHtml}
+    </div>`;
+  }).join("") + `</div>`;
+
+  el.querySelectorAll(".skin-card").forEach(card => {
+    card.onclick = async () => {
+      const id = card.dataset.skin;
+      const sk = catalog[id];
+      const isOwned = owned.includes(id);
+      if (isOwned){
+        if (my_skin === id) return;
+        const {data} = await api("/api/skins/select", {method:"POST", body: JSON.stringify({skin_id: id})});
+        if (data.error) return toast(data.error);
+        toast("Скин выбран: " + sk.name);
+        loadSkins(bg);
+      } else {
+        if (!S.infinite && S.coins < sk.price) return toast("Не хватает монет");
+        if (!confirm("Купить " + sk.name + " за " + fmt(sk.price) + " ₽?")) return;
+        const {data} = await api("/api/skins/buy", {method:"POST", body: JSON.stringify({skin_id: id})});
+        if (data.error) return toast(data.error);
+        if (!S.infinite){ S.coins -= sk.price; dirty = true; render(); }
+        toast("Куплено: " + sk.name);
+        loadSkins(bg);
+      }
+    };
+  });
+}
+
 /* ---- TICK ---- */
 setInterval(() => {
   if (S.cps > 0 && el.game.classList.contains("active")){
@@ -951,6 +1197,7 @@ setInterval(() => {
 }, 100);
 setInterval(pushState, 1500);
 setInterval(fetchState, 3000);
+setInterval(pollBroadcast, 3000);
 window.addEventListener("beforeunload", () => { if (dirty) pushState(); });
 
 /* ---- INIT ---- */
