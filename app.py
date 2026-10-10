@@ -1,29 +1,14 @@
-from flask import Flask, request, jsonify, render_template, g
-import json, os, secrets, hashlib, time, threading
-
-BASE = os.path.dirname(os.path.abspath(__file__))
-DATA = os.path.join(BASE, "data")
-os.makedirs(DATA, exist_ok=True)
-USERS = os.path.join(DATA, "users.json")
-TOKENS = os.path.join(DATA, "tokens.json")
+from flask import Flask, request, jsonify, render_template
+import secrets, hashlib, time, psycopg2
+from psycopg2.extras import RealDictCursor
+from db import get_db, init_db
 
 app = Flask(__name__)
-LOCK = threading.Lock()
 
-DEFAULTS = {"coins":0, "perClick":1, "cps":0, "clickLvl":0, "cpsLvl":0, "level":1}
-
-def _load(path, default):
-    if not os.path.exists(path): return default
-    try: return json.load(open(path))
-    except: return default
-
-def _save(path, data):
-    with open(path, "w") as f: json.dump(data, f, indent=2, ensure_ascii=False)
-
-def load_users():  return _load(USERS, {})
-def save_users(u): _save(USERS, u)
-def load_tokens(): return _load(TOKENS, {})
-def save_tokens(t): _save(TOKENS, t)
+try:
+    init_db()
+except Exception as e:
+    print("DB init error:", e)
 
 def hash_pw(pw, salt=None):
     if salt is None: salt = secrets.token_hex(16)
@@ -36,11 +21,11 @@ def auth_user():
     h = request.headers.get("Authorization", "")
     if not h.startswith("Bearer "): return None
     token = h[7:].strip()
-    tokens = load_tokens()
-    uname = tokens.get(token)
-    if not uname: return None
-    users = load_users()
-    return uname if uname in users else None
+    conn = get_db(); cur = conn.cursor()
+    cur.execute("SELECT username FROM tokens WHERE token=%s", (token,))
+    r = cur.fetchone()
+    cur.close(); conn.close()
+    return r[0] if r else None
 
 @app.route("/")
 def root():
@@ -58,66 +43,86 @@ def register():
         return jsonify({"error":"Только буквы, цифры, _ и -"}), 400
     if len(password) < 3: return jsonify({"error":"Пароль минимум 3 символа"}), 400
 
-    with LOCK:
-        users = load_users()
-        key = username.lower()
-        for u in users.values():
-            if u["username"].lower() == key:
-                return jsonify({"error":"Ник занят"}), 400
-        salt, h = hash_pw(password)
-        uid = max([u.get("id",0) for u in users.values()] + [0]) + 1
-        users[key] = {
-            "id": uid,
-            "username": username,
-            "salt": salt,
-            "hash": h,
-            "created": time.time(),
-            **DEFAULTS
-        }
-        save_users(users)
-        token = secrets.token_urlsafe(24)
-        tokens = load_tokens()
-        tokens[token] = key
-        save_tokens(tokens)
-        return jsonify({"ok":True, "token":token, "username":username, "id":uid})
+    salt, h = hash_pw(password)
+    conn = get_db(); cur = conn.cursor()
+    try:
+        cur.execute(
+            "INSERT INTO users (username, salt, hash, created, coins, per_click, cps, click_lvl, cps_lvl, level, version) "
+            "VALUES (%s, %s, %s, %s, 0, 1, 0, 0, 0, 1, 0) RETURNING id",
+            (username, salt, h, time.time())
+        )
+        uid = cur.fetchone()[0]
+        conn.commit()
+    except psycopg2.errors.UniqueViolation:
+        conn.rollback()
+        cur.close(); conn.close()
+        return jsonify({"error":"Ник занят"}), 400
+    finally:
+        try: cur.close()
+        except: pass
+        try: conn.close()
+        except: pass
+
+    token = secrets.token_urlsafe(24)
+    conn = get_db(); cur = conn.cursor()
+    cur.execute("INSERT INTO tokens (token, username, created) VALUES (%s, %s, %s)",
+                (token, username, time.time()))
+    conn.commit()
+    cur.close(); conn.close()
+    return jsonify({"ok":True, "token":token, "username":username, "id":uid})
 
 @app.route("/api/login", methods=["POST"])
 def login():
     d = request.get_json() or {}
-    username = (d.get("username") or "").strip().lower()
+    username = (d.get("username") or "").strip()
     password = d.get("password") or ""
-    users = load_users()
-    u = users.get(username)
-    if not u: return jsonify({"error":"Аккаунт не найден"}), 400
-    if not check_pw(password, u["salt"], u["hash"]):
+    conn = get_db(); cur = conn.cursor()
+    cur.execute("SELECT id, salt, hash FROM users WHERE LOWER(username)=LOWER(%s)", (username,))
+    row = cur.fetchone()
+    if not row:
+        cur.close(); conn.close()
+        return jsonify({"error":"Аккаунт не найден"}), 400
+    uid, salt, h = row
+    if not check_pw(password, salt, h):
+        cur.close(); conn.close()
         return jsonify({"error":"Неверный пароль"}), 400
+    cur.execute("SELECT username FROM users WHERE id=%s", (uid,))
+    real_username = cur.fetchone()[0]
     token = secrets.token_urlsafe(24)
-    tokens = load_tokens()
-    tokens[token] = username
-    save_tokens(tokens)
-    return jsonify({"ok":True, "token":token, "username":u["username"], "id":u["id"]})
+    cur.execute("INSERT INTO tokens (token, username, created) VALUES (%s, %s, %s)",
+                (token, real_username, time.time()))
+    conn.commit()
+    cur.close(); conn.close()
+    return jsonify({"ok":True, "token":token, "username":real_username, "id":uid})
 
 @app.route("/api/me")
 def me():
     uname = auth_user()
     if not uname: return jsonify({"ok":False}), 401
-    u = load_users().get(uname, {})
-    return jsonify({"ok":True, "username":u.get("username"), "id":u.get("id")})
+    conn = get_db(); cur = conn.cursor(cursor_factory=RealDictCursor)
+    cur.execute("SELECT id, username FROM users WHERE username=%s", (uname,))
+    u = cur.fetchone()
+    cur.close(); conn.close()
+    if not u: return jsonify({"ok":False}), 401
+    return jsonify({"ok":True, "username":u["username"], "id":u["id"]})
 
 @app.route("/api/state")
 def state():
     uname = auth_user()
     if not uname: return jsonify({"error":"not_logged_in"}), 401
-    users = load_users()
-    u = users[uname]
+    conn = get_db(); cur = conn.cursor(cursor_factory=RealDictCursor)
+    cur.execute("SELECT coins, per_click, cps, click_lvl, cps_lvl, level, version FROM users WHERE username=%s", (uname,))
+    u = cur.fetchone()
+    cur.close(); conn.close()
+    if not u: return jsonify({"error":"not_logged_in"}), 401
     return jsonify({
-        "coins": u.get("coins",0),
-        "perClick": u.get("perClick",1),
-        "cps": u.get("cps",0),
-        "clickLvl": u.get("clickLvl",0),
-        "cpsLvl": u.get("cpsLvl",0),
-        "level": u.get("level",1),
-        "version": u.get("version",0)
+        "coins": int(u["coins"]),
+        "perClick": int(u["per_click"]),
+        "cps": int(u["cps"]),
+        "clickLvl": int(u["click_lvl"]),
+        "cpsLvl": int(u["cps_lvl"]),
+        "level": int(u["level"]),
+        "version": int(u["version"])
     })
 
 @app.route("/api/save", methods=["POST"])
@@ -125,27 +130,36 @@ def save_state():
     uname = auth_user()
     if not uname: return jsonify({"error":"not_logged_in"}), 401
     inc = request.get_json() or {}
-    with LOCK:
-        users = load_users()
-        u = users[uname]
-        if inc.get("version",0) < u.get("version",0):
-            return jsonify({"conflict":True})
-        for k in ["coins","perClick","cps","clickLvl","cpsLvl","level"]:
-            if k in inc: u[k] = inc[k]
-        u["version"] = u.get("version",0) + 1
-        users[uname] = u
-        save_users(users)
-        return jsonify({"ok":True, "version":u["version"]})
+    conn = get_db(); cur = conn.cursor(cursor_factory=RealDictCursor)
+    cur.execute("SELECT version FROM users WHERE username=%s", (uname,))
+    u = cur.fetchone()
+    if not u:
+        cur.close(); conn.close()
+        return jsonify({"error":"not_logged_in"}), 401
+    if int(inc.get("version",0)) < int(u["version"]):
+        cur.close(); conn.close()
+        return jsonify({"conflict": True})
+    cur.execute(
+        "UPDATE users SET coins=%s, per_click=%s, cps=%s, click_lvl=%s, cps_lvl=%s, level=%s, version=%s WHERE username=%s",
+        (int(inc.get("coins",0)), int(inc.get("perClick",1)), int(inc.get("cps",0)),
+         int(inc.get("clickLvl",0)), int(inc.get("cpsLvl",0)), int(inc.get("level",1)),
+         int(u["version"])+1, uname)
+    )
+    conn.commit()
+    cur.close(); conn.close()
+    return jsonify({"ok":True, "version": int(u["version"])+1})
 
 @app.route("/api/logout", methods=["POST"])
 def logout():
     h = request.headers.get("Authorization", "")
     if h.startswith("Bearer "):
-        tokens = load_tokens()
-        tokens.pop(h[7:].strip(), None)
-        save_tokens(tokens)
+        conn = get_db(); cur = conn.cursor()
+        cur.execute("DELETE FROM tokens WHERE token=%s", (h[7:].strip(),))
+        conn.commit()
+        cur.close(); conn.close()
     return jsonify({"ok":True})
 
 if __name__ == "__main__":
+    import os
     port = int(os.environ.get("PORT", 8000))
     app.run(host="0.0.0.0", port=port)

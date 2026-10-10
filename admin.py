@@ -1,128 +1,118 @@
-import json, os, sys, hashlib, secrets
-
-BASE = os.path.dirname(os.path.abspath(__file__))
-USERS = os.path.join(BASE, "data", "users.json")
-
-def load():
-    if not os.path.exists(USERS): return {}
-    try: return json.load(open(USERS))
-    except: return {}
-
-def save(u):
-    with open(USERS, "w") as f: json.dump(u, f, indent=2, ensure_ascii=False)
+import json, sys, hashlib, secrets, time
+from db import get_db
 
 def find(users, name):
     return users.get(name.lower())
 
 def usage():
     print("""
-💰 Админка Рублёвки
+💰 Админка Рублёвки (PostgreSQL)
 
-  python admin.py list                     все игроки
-  python admin.py show <ник>               подробно про игрока
-  python admin.py give <ник> <N>           выдать N ₽
-  python admin.py take <ник> <N>           забрать N ₽
-  python admin.py set <ник> <N>            установить N ₽
-  python admin.py level <ник> <N>          уровень монеты 1-100
-  python admin.py cps <ник> <N>            ₽/сек
-  python admin.py click <ник> <N>          ₽ за тап
-  python admin.py reset <ник>              сбросить прогресс
-  python admin.py delete <ник>             удалить игрока
-  python admin.py password <ник> <newpw>   сменить пароль
+  python admin.py list
+  python admin.py show <ник>
+  python admin.py give <ник> <N>
+  python admin.py take <ник> <N>
+  python admin.py set <ник> <N>
+  python admin.py level <ник> <N>
+  python admin.py cps <ник> <N>
+  python admin.py click <ник> <N>
+  python admin.py reset <ник>
+  python admin.py delete <ник>
+  python admin.py password <ник> <newpw>
 """)
 
-def cmd_list(users):
-    if not users:
+def get_all():
+    conn = get_db(); cur = conn.cursor()
+    cur.execute("SELECT id, username, coins, per_click, cps, click_lvl, cps_lvl, level, version FROM users ORDER BY id")
+    rows = cur.fetchall()
+    cur.close(); conn.close()
+    return rows
+
+def get_one(name):
+    conn = get_db(); cur = conn.cursor()
+    cur.execute("SELECT id, username, coins, per_click, cps, click_lvl, cps_lvl, level, version FROM users WHERE LOWER(username)=LOWER(%s)", (name,))
+    r = cur.fetchone()
+    cur.close(); conn.close()
+    return r
+
+def update(name, **fields):
+    conn = get_db(); cur = conn.cursor()
+    sets = ", ".join(f"{k}=%s" for k in fields)
+    vals = list(fields.values()) + [name]
+    cur.execute(f"UPDATE users SET {sets}, version=version+1 WHERE LOWER(username)=LOWER(%s)", vals)
+    conn.commit(); cur.close(); conn.close()
+
+def cmd_list():
+    rows = get_all()
+    if not rows:
         print("Пока никого нет"); return
-    print(f"{'ID':<4} {'НИК':<20} {'₽':<15} {'УР':<5} {'₽/сек':<8}")
-    print("-" * 60)
-    for k in sorted(users, key=lambda x: users[x].get("id",0)):
-        u = users[k]
-        print(f"{u.get('id',''):<4} {u.get('username',''):<20} {int(u.get('coins',0)):<15} {u.get('level',1):<5} {int(u.get('cps',0)):<8}")
+    print(f"\n{'ID':<4} {'НИК':<20} {'₽':>15} {'УР':>5} {'₽/сек':>8}")
+    print("─" * 58)
+    for r in rows:
+        print(f"{r[0]:<4} {r[1]:<20} {int(r[2]):>15,} {r[7]:>5} {int(r[4]):>8}".replace(",", " "))
+    print()
 
-def cmd_show(users, name):
-    u = find(users, name)
+def cmd_show(name):
+    u = get_one(name)
     if not u: print(f"❌ {name} не найден"); return
-    print(json.dumps({
-        "id":u.get("id"), "username":u.get("username"),
-        "coins":u.get("coins"), "perClick":u.get("perClick"),
-        "cps":u.get("cps"), "clickLvl":u.get("clickLvl"),
-        "cpsLvl":u.get("cpsLvl"), "level":u.get("level")
-    }, indent=2, ensure_ascii=False))
-
-def get_num(args, idx):
-    if len(args) <= idx: return None
-    try: return int(args[idx])
-    except: return None
+    print(f"""
+👤 {u[1]} (ID: {u[0]})
+💰 Монеты:    {int(u[2]):,} ₽
+👆 За тап:    {u[3]} ₽
+⚡ В сек:     {u[4]} ₽/сек
+✨ Уровень:   {u[7]}/100
+""".replace(",", " "))
 
 def main():
-    if len(sys.argv) < 2:
-        usage(); return
+    if len(sys.argv) < 2: usage(); return
     cmd = sys.argv[1].lower()
-    users = load()
 
-    if cmd == "list":
-        cmd_list(users); return
+    if cmd == "list": cmd_list(); return
 
-    if len(sys.argv) < 3:
-        usage(); return
-    name = sys.argv[2].lower()
-    u = find(users, name)
-
-    if cmd == "show":
-        cmd_show(users, sys.argv[2]); return
-
-    if not u:
+    if len(sys.argv) < 3: usage(); return
+    name = sys.argv[2]
+    u = get_one(name)
+    if not u and cmd not in ("delete",):
         print(f"❌ {name} не найден"); return
 
+    if cmd == "show": cmd_show(name); return
+
     if cmd == "delete":
-        del users[name]
-        save(users)
-        print(f"✅ {u['username']} удалён")
-        return
+        conn = get_db(); cur = conn.cursor()
+        cur.execute("DELETE FROM users WHERE LOWER(username)=LOWER(%s)", (name,))
+        conn.commit(); cur.close(); conn.close()
+        print(f"🗑 {name} удалён"); return
 
     if cmd == "reset":
-        for k in ["coins","perClick","cps","clickLvl","cpsLvl","level"]:
-            u[k] = {"coins":0,"perClick":1,"cps":0,"clickLvl":0,"cpsLvl":0,"level":1}[k]
-        u["version"] = u.get("version",0) + 1
-        save(users)
-        print(f"✅ Прогресс {u['username']} сброшен")
-        return
+        update(name, coins=0, per_click=1, cps=0, click_lvl=0, cps_lvl=0, level=1)
+        print(f"✅ {u[1]}: прогресс сброшен"); return
 
     if cmd == "password":
-        if len(sys.argv) < 4:
-            print("❌ Укажи новый пароль"); return
+        if len(sys.argv) < 4: print("❌ Укажи пароль"); return
         newpw = sys.argv[3]
         salt = secrets.token_hex(16)
-        u["salt"] = salt
-        u["hash"] = hashlib.sha256((salt + newpw).encode()).hexdigest()
-        save(users)
-        print(f"✅ Пароль {u['username']} изменён")
-        return
+        h = hashlib.sha256((salt + newpw).encode()).hexdigest()
+        update(name, salt=salt, hash=h)
+        print(f"✅ {u[1]}: пароль изменён"); return
 
-    n = get_num(sys.argv, 3)
-    if n is None:
-        print("❌ Укажи число"); return
+    if len(sys.argv) < 4: print("❌ Нужно число"); return
+    try: n = int(sys.argv[3])
+    except: print("❌ Нужно число"); return
 
     if cmd == "give":
-        u["coins"] = u.get("coins",0) + n
-        print(f"✅ +{n} ₽. Теперь {int(u['coins'])}")
+        update(name, coins=int(u[2])+n); print(f"✅ {u[1]}: +{n:,} ₽".replace(",", " "))
     elif cmd == "take":
-        u["coins"] = max(0, u.get("coins",0) - n)
-        print(f"✅ -{n} ₽. Теперь {int(u['coins'])}")
+        update(name, coins=max(0, int(u[2])-n)); print(f"✅ {u[1]}: -{n:,} ₽".replace(",", " "))
     elif cmd == "set":
-        u["coins"] = n; print(f"✅ {n} ₽")
+        update(name, coins=n); print(f"✅ {u[1]}: {n:,} ₽".replace(",", " "))
     elif cmd == "level":
-        u["level"] = max(1, min(100, n)); print(f"✅ Уровень: {u['level']}")
+        update(name, level=max(1, min(100, n))); print(f"✅ {u[1]}: уровень {max(1,min(100,n))}")
     elif cmd == "cps":
-        u["cps"] = n; u["cpsLvl"] = n; print(f"✅ {n} ₽/сек")
+        update(name, cps=n, cps_lvl=n); print(f"✅ {u[1]}: {n} ₽/сек")
     elif cmd == "click":
-        u["perClick"] = n; u["clickLvl"] = max(0, n-1); print(f"✅ {n} ₽ за тап")
+        update(name, per_click=n, click_lvl=max(0, n-1)); print(f"✅ {u[1]}: {n} ₽ за тап")
     else:
-        usage(); return
-
-    u["version"] = u.get("version",0) + 1
-    save(users)
+        usage()
 
 if __name__ == "__main__":
     main()
