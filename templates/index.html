@@ -650,7 +650,7 @@ async function openTop(){
       else if (place === 2){ cls = "silver"; medal = "🥈"; }
       else if (place === 3){ cls = "bronze"; medal = "🥉"; }
       const color = ["#e17076","#7bc862","#e5ca77","#65aadd","#a695e7","#ee7aae","#6ec9cb","#faa774"][u.username.charCodeAt(0)%8];
-      const me = u.username.toLowerCase() === username.toLowerCase();
+      const me = u.username === username;
       return `<div class="top-row" data-user="${encodeURIComponent(u.username)}" style="${me?'background:#2a2a5a':''}">
         <div class="place ${cls}">${medal}</div>
         <div class="t-avatar" style="background:${color}">${u.username[0].toUpperCase()}</div>

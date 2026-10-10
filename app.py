@@ -45,6 +45,10 @@ def register():
 
     salt, h = hash_pw(password)
     conn = get_db(); cur = conn.cursor()
+    cur.execute("SELECT id FROM users WHERE LOWER(username)=LOWER(%s)", (username,))
+    if cur.fetchone():
+        cur.close(); conn.close()
+        return jsonify({"error":"Ник занят"}), 400
     try:
         cur.execute(
             "INSERT INTO users (username, salt, hash, created, coins, per_click, cps, click_lvl, cps_lvl, level, version) "
