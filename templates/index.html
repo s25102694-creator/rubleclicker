@@ -346,6 +346,57 @@ body { background: radial-gradient(ellipse at 50% 20%, #232340 0%, #14141f 70%);
   100% { transform: rotate(360deg) scale(1); }
 }
 
+
+/* ANIMATIONS */
+@keyframes modalFadeIn { from{opacity:0;} to{opacity:1;} }
+@keyframes modalPopIn { from{opacity:0; transform:scale(.9) translateY(20px);}
+  to{opacity:1; transform:scale(1) translateY(0);} }
+@keyframes modalSlideUp { from{opacity:0; transform:translateY(60px);}
+  to{opacity:1; transform:translateY(0);} }
+.modal-bg { animation: modalFadeIn .2s ease-out !important; }
+.modal-sheet { animation: modalPopIn .3s cubic-bezier(.34,1.56,.64,1) !important; }
+.modal-sheet.bottom { animation: modalSlideUp .3s cubic-bezier(.34,1.56,.64,1) !important; }
+.casino-modal { animation: modalPopIn .3s cubic-bezier(.34,1.56,.64,1) !important; }
+.union-row, .top-row, .up-row { animation: modalFadeIn .3s ease-out; }
+
+/* PROFILE BANNERS */
+.profile-banners { display:grid; grid-template-columns:repeat(3,1fr); gap:8px;
+  margin:12px 0; padding:0 4px; }
+.banner-slot { aspect-ratio:1; border-radius:12px; display:flex;
+  flex-direction:column; align-items:center; justify-content:center;
+  gap:4px; padding:4px; cursor:pointer; position:relative;
+  box-shadow: inset 0 -3px 8px rgba(0,0,0,.3), inset 0 2px 6px rgba(255,255,255,.15);
+  transition: transform .15s; overflow:hidden; }
+.banner-slot:active { transform:scale(.94); }
+.banner-slot.empty { background:#1f1f35; border:2px dashed #3a3a55; }
+.banner-slot.filled { color:#fff; font-weight:700; }
+.banner-slot .b-emoji { font-size:26px; line-height:1; filter:drop-shadow(0 2px 4px rgba(0,0,0,.5)); }
+.banner-slot .b-label { font-size:10px; text-align:center; opacity:.9;
+  max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.banner-slot .b-del { position:absolute; top:2px; right:4px; font-size:14px;
+  color:rgba(255,255,255,.7); cursor:pointer; line-height:1; }
+
+/* KICK BUTTON */
+.kick-btn { width:32px; height:32px; border-radius:50%; background:#8f2a2a;
+  color:#fff; border:none; display:flex; align-items:center; justify-content:center;
+  font-size:14px; cursor:pointer; flex-shrink:0; padding:0; font-family:inherit; }
+.kick-btn:active { background:#b03030; transform:scale(.9); }
+
+/* BANNER EDITOR */
+.banner-editor-emoji { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px;
+  justify-content:center; }
+.banner-editor-emoji button { width:44px; height:44px; border-radius:10px;
+  background:#252540; border:2px solid #2a2a44; font-size:22px; cursor:pointer;
+  display:flex; align-items:center; justify-content:center; padding:0; }
+.banner-editor-emoji button.active { border-color:#4a5cf5;
+  background:#2d2d5a; box-shadow:0 0 10px rgba(74,92,245,.5); }
+.banner-editor-color { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px;
+  justify-content:center; }
+.banner-editor-color button { width:40px; height:40px; border-radius:50%;
+  border:3px solid transparent; cursor:pointer; padding:0; }
+.banner-editor-color button.active { border-color:#fff;
+  box-shadow:0 0 12px rgba(255,255,255,.6); }
+
 </style>
 </head>
 <body>
@@ -1011,6 +1062,13 @@ async function openUnionInfo(uid){
       ${actionHtml}
     `;
 
+    body.querySelectorAll("[data-kick]").forEach(b => {
+      b.onclick = (e) => {
+        e.stopPropagation();
+        kickMember(b.dataset.kick, uid, () => { closeMe(); openUnionInfo(uid); });
+      };
+    });
+
     const jb = document.getElementById("uiJoin");
     if (jb) jb.onclick = async () => {
       const {data} = await api("/api/unions/join", {method:"POST", body: JSON.stringify({id: u.id})});
@@ -1295,6 +1353,114 @@ async function loadSkins(bg){
       }
     };
   });
+}
+
+/* ---- BANNERS ---- */
+const BANNER_EMOJIS = ["\U0001f451","\U0001f4a0","\U0001f525","\u2b50","\U0001f48e","\U0001f680","\U0001f30c","\U0001f308","\u26a1","\U0001f3c6","\U0001f4b0","\U0001f9e0"];
+const BANNER_COLORS = ["#e17076","#7bc862","#e5ca77","#65aadd","#a695e7","#ee7aae","#6ec9cb","#faa774","#ff9d5c","#d4262a"];
+
+async function loadBanners(username, container, isOwner){
+  const {data} = await api("/api/banners/" + encodeURIComponent(username));
+  if (!Array.isArray(data)) return;
+  const bySlot = {};
+  data.forEach(b => bySlot[b.slot] = b);
+  container.innerHTML = "";
+  for (let i = 1; i <= 6; i++){
+    const b = bySlot[i];
+    const div = document.createElement("div");
+    div.className = "banner-slot " + (b ? "filled" : "empty");
+    if (b){
+      div.style.background = `radial-gradient(circle at 32% 28%, ${b.color}dd, ${b.color}88 70%, ${b.color}44)`;
+      div.innerHTML = `
+        <div class="b-emoji">${b.emoji}</div>
+        ${b.label?`<div class="b-label">${b.label}</div>`:""}
+        ${isOwner?`<div class="b-del" data-slot="${i}">×</div>`:""}
+      `;
+    } else {
+      div.innerHTML = isOwner ? `<div class="b-emoji" style="opacity:.3">+</div>` : "";
+    }
+    if (isOwner){
+      div.onclick = (e) => {
+        if (e.target.classList.contains("b-del")){
+          e.stopPropagation();
+          deleteBanner(i, username, container, isOwner);
+        } else {
+          openBannerEditor(i, username, container, isOwner);
+        }
+      };
+    }
+    container.appendChild(div);
+  }
+}
+
+async function deleteBanner(slot, username, container, isOwner){
+  const {data} = await api("/api/banners/" + slot, {method:"DELETE"});
+  if (data.ok) loadBanners(username, container, isOwner);
+}
+
+function openBannerEditor(slot, username, container, isOwner){
+  const bg = document.createElement("div");
+  bg.className = "modal-bg";
+  bg.innerHTML = `
+    <div class="modal-sheet" style="max-width:380px">
+      <span class="modal-close" id="beClose">×</span>
+      <h3>Баннер #${slot}</h3>
+      <div class="admin-section-title">Эмодзи</div>
+      <div class="banner-editor-emoji" id="beEmojis">
+        ${BANNER_EMOJIS.map((e,i) => `<button data-emoji="${e}" data-i="${i}">${e}</button>`).join("")}
+      </div>
+      <div class="admin-section-title">Цвет</div>
+      <div class="banner-editor-color" id="beColors">
+        ${BANNER_COLORS.map(c => `<button data-color="${c}" style="background:${c}"></button>`).join("")}
+      </div>
+      <div class="admin-section-title">Подпись (необязательно)</div>
+      <input class="union-search" id="beLabel" maxlength="40" placeholder="Например: Топ-1">
+      <button class="union-create-btn" id="beSave">Сохранить</button>
+      <div id="beErr" style="color:#e17076;text-align:center;font-size:13px;min-height:18px"></div>
+    </div>`;
+  document.body.appendChild(bg);
+  let selEmoji = BANNER_EMOJIS[0];
+  let selColor = BANNER_COLORS[0];
+
+  bg.querySelector("#beEmojis").querySelectorAll("button").forEach(b => {
+    if (b.dataset.i === "0") b.classList.add("active");
+    b.onclick = () => {
+      bg.querySelectorAll("#beEmojis button").forEach(x => x.classList.remove("active"));
+      b.classList.add("active");
+      selEmoji = b.dataset.emoji;
+    };
+  });
+  bg.querySelector("#beColors").querySelectorAll("button").forEach((b,i) => {
+    if (i === 0) b.classList.add("active");
+    b.onclick = () => {
+      bg.querySelectorAll("#beColors button").forEach(x => x.classList.remove("active"));
+      b.classList.add("active");
+      selColor = b.dataset.color;
+    };
+  });
+
+  const closeMe = () => bg.remove();
+  bg.querySelector("#beClose").onclick = closeMe;
+  bg.addEventListener("pointerdown", e => { if (e.target === bg) closeMe(); });
+
+  bg.querySelector("#beSave").onclick = async () => {
+    const label = bg.querySelector("#beLabel").value.trim();
+    const {data} = await api("/api/banners", {method:"POST", body: JSON.stringify({
+      slot, emoji: selEmoji, color: selColor, label
+    })});
+    if (data.error){ bg.querySelector("#beErr").textContent = data.error; return; }
+    closeMe();
+    loadBanners(username, container, isOwner);
+  };
+}
+
+/* ---- KICK ---- */
+async function kickMember(targetUsername, unionId, onDone){
+  if (!confirm("Кикнуть " + targetUsername + "?")) return;
+  const {data} = await api("/api/unions/kick", {method:"POST", body: JSON.stringify({username: targetUsername})});
+  if (data.error) return toast(data.error);
+  toast("Кикнут: " + targetUsername);
+  if (onDone) onDone();
 }
 
 /* ---- TICK ---- */

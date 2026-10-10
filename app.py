@@ -568,6 +568,80 @@ def get_broadcast():
     if not r: return jsonify({"broadcast": None})
     return jsonify({"broadcast": {"id":r[0], "text":r[1], "author":r[2], "created":r[3]}})
 
+
+# ---------- KICK ----------
+@app.route("/api/unions/kick", methods=["POST"])
+def union_kick():
+    uname = auth_user()
+    if not uname: return jsonify({"error":"not_logged_in"}), 401
+    d = request.get_json() or {}
+    target = (d.get("username") or "").strip()
+    if not target: return jsonify({"error":"Не указан ник"}), 400
+    conn = get_db(); cur = conn.cursor()
+    cur.execute("SELECT union_id, role FROM union_members WHERE username=%s", (uname,))
+    me = cur.fetchone()
+    if not me or me[1] != "founder":
+        cur.close(); conn.close()
+        return jsonify({"error":"Только основатель может кикать"}), 403
+    my_uid = me[0]
+    if target.lower() == uname.lower():
+        cur.close(); conn.close()
+        return jsonify({"error":"Себя нельзя"}), 400
+    cur.execute("SELECT union_id FROM union_members WHERE LOWER(username)=LOWER(%s)", (target,))
+    t = cur.fetchone()
+    if not t or t[0] != my_uid:
+        cur.close(); conn.close()
+        return jsonify({"error":"Игрок не в твоём союзе"}), 400
+    cur.execute("DELETE FROM union_members WHERE LOWER(username)=LOWER(%s)", (target,))
+    conn.commit(); cur.close(); conn.close()
+    return jsonify({"ok":True})
+
+# ---------- BANNERS ----------
+BANNER_EMOJIS = ["👑","💠","🔥","⭐","💎","🚀","🌌","🌈","⚡","🏆","💰","🧠"]
+BANNER_COLORS = ["#e17076","#7bc862","#e5ca77","#65aadd","#a695e7","#ee7aae","#6ec9cb","#faa774","#ff9d5c","#d4262a"]
+
+@app.route("/api/banners/<username>")
+def user_banners(username):
+    uname = auth_user()
+    if not uname: return jsonify({"error":"not_logged_in"}), 401
+    conn = get_db(); cur = conn.cursor()
+    cur.execute("SELECT slot, emoji, color, label FROM user_banners WHERE LOWER(username)=LOWER(%s) ORDER BY slot", (username,))
+    rows = cur.fetchall()
+    cur.close(); conn.close()
+    return jsonify([{"slot":r[0], "emoji":r[1], "color":r[2], "label":r[3]} for r in rows])
+
+@app.route("/api/banners", methods=["POST"])
+def set_banner():
+    uname = auth_user()
+    if not uname: return jsonify({"error":"not_logged_in"}), 401
+    d = request.get_json() or {}
+    slot = int(d.get("slot", 0))
+    emoji = (d.get("emoji") or "").strip()
+    color = (d.get("color") or "").strip()
+    label = (d.get("label") or "").strip()[:40]
+    if slot < 1 or slot > 6: return jsonify({"error":"Слот 1-6"}), 400
+    if emoji not in BANNER_EMOJIS: return jsonify({"error":"Недопустимый emoji"}), 400
+    if color not in BANNER_COLORS: return jsonify({"error":"Недопустимый цвет"}), 400
+    import time as _t
+    conn = get_db(); cur = conn.cursor()
+    cur.execute("""
+        INSERT INTO user_banners (username, slot, emoji, color, label, created)
+        VALUES (%s,%s,%s,%s,%s,%s)
+        ON CONFLICT (username, slot) DO UPDATE
+        SET emoji=EXCLUDED.emoji, color=EXCLUDED.color, label=EXCLUDED.label
+    """, (uname, slot, emoji, color, label, _t.time()))
+    conn.commit(); cur.close(); conn.close()
+    return jsonify({"ok":True})
+
+@app.route("/api/banners/<int:slot>", methods=["DELETE"])
+def del_banner(slot):
+    uname = auth_user()
+    if not uname: return jsonify({"error":"not_logged_in"}), 401
+    conn = get_db(); cur = conn.cursor()
+    cur.execute("DELETE FROM user_banners WHERE username=%s AND slot=%s", (uname, slot))
+    conn.commit(); cur.close(); conn.close()
+    return jsonify({"ok":True})
+
 if __name__ == "__main__":
     import os
     port = int(os.environ.get("PORT", 8000))
