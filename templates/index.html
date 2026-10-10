@@ -913,6 +913,7 @@ async function openProfile(name){
         <div class="p-name">${data.username}</div>
         <div class="p-sub">в Рублёвке</div>
       </div>
+      <div class="profile-banners" id="profBanners"></div>
       <div class="stat-grid">
         <div class="stat-box"><div class="s-val">${fmt(data.coins)} ₽</div><div class="s-label">Монеты</div></div>
         <div class="stat-box"><div class="s-val">${data.level} / ${MAX_LEVEL}</div><div class="s-label">Уровень</div></div>
@@ -921,6 +922,10 @@ async function openProfile(name){
         <div class="stat-box"><div class="s-val">${data.clickLvl}/${MAX_CLICK_LVL}</div><div class="s-label">Клик ур.</div></div>
         <div class="stat-box"><div class="s-val">${data.cpsLvl}/${MAX_CPS_LVL}</div><div class="s-label">CPS ур.</div></div>
       </div>`;
+    setTimeout(() => {
+      const bc = document.getElementById("profBanners");
+      if (bc) loadBanners(data.username, bc, data.username === username);
+    }, 50);
   };
 
   const refreshProfile = async () => {
@@ -1030,6 +1035,7 @@ async function openUnionInfo(uid){
     if (u.error){ body.innerHTML = `<div class="loading">Союз не найден</div>`; return; }
     myUnionId = myId;
     const inThis = (myId === u.id);
+    const canKick = (u.my_role === "founder");
     const membersHtml = u.members.map(m => `
       <div class="top-row" style="cursor:default">
         <div class="t-avatar" style="background:${u.color}">${m.username[0].toUpperCase()}</div>
@@ -1038,6 +1044,7 @@ async function openUnionInfo(uid){
           <div class="t-sub">${m.role==='founder'?'Основатель':'Участник'}</div>
         </div>
       </div>
+      ${(canKick && m.role !== 'founder') ? `<button class="kick-btn" data-kick="${m.username}">✖</button>` : ""}
     `).join("") || `<div class="loading">Пока никого нет</div>`;
 
     let actionHtml = "";
@@ -1061,6 +1068,13 @@ async function openUnionInfo(uid){
       <div class="union-members-list">${membersHtml}</div>
       ${actionHtml}
     `;
+
+    body.querySelectorAll("[data-kick]").forEach(b => {
+      b.onclick = (e) => {
+        e.stopPropagation();
+        kickMember(b.dataset.kick, uid, () => { closeMe(); openUnionInfo(uid); });
+      };
+    });
 
     body.querySelectorAll("[data-kick]").forEach(b => {
       b.onclick = (e) => {
