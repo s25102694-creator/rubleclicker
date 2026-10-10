@@ -10,7 +10,6 @@
 html, body { height:100%; overflow:hidden; font-family:-apple-system,Roboto,sans-serif; touch-action:manipulation; }
 body { background: radial-gradient(ellipse at 50% 20%, #232340 0%, #14141f 70%); color:#fff; }
 
-/* AUTH */
 .auth { display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; padding:24px; }
 .auth-logo { font-size:72px; margin-bottom:12px; }
 .auth-title { font-size:28px; font-weight:800; margin-bottom:6px; color:#ffd75e; }
@@ -28,7 +27,6 @@ body { background: radial-gradient(ellipse at 50% 20%, #232340 0%, #14141f 70%);
 .auth-err { color:#e17076; margin-top:12px; font-size:14px; min-height:18px; text-align:center; max-width:340px; }
 .auth-switch { margin-top:20px; color:#4a5cf5; cursor:pointer; font-size:14px; font-weight:600; }
 
-/* GAME */
 .game { display:none; flex-direction:column; height:100%; }
 .game.active { display:flex; }
 
@@ -94,17 +92,84 @@ body { background: radial-gradient(ellipse at 50% 20%, #232340 0%, #14141f 70%);
 .shop-btn .badge { position:absolute; top:-6px; right:-6px; background:#ff3b30;
   color:#fff; font-size:13px; padding:2px 8px; border-radius:11px; font-weight:700; }
 
-/* MODAL */
-.modal-bg { position:fixed; inset:0; background:rgba(0,0,0,.7); display:flex;
-  align-items:flex-end; justify-content:center; z-index:100; animation: fade .2s; }
+.union-btn { position:fixed; top:50%; left:0; transform:translateY(-50%);
+  background:linear-gradient(180deg,#4a5cf5,#3a48d0); color:#fff;
+  padding:14px 8px; border-radius:0 14px 14px 0; cursor:pointer;
+  font-weight:700; font-size:13px; writing-mode: vertical-rl; text-orientation: mixed;
+  box-shadow: 4px 0 14px rgba(74,92,245,.4); z-index:50;
+  display:none; flex-direction:column; align-items:center; gap:6px;
+  letter-spacing:2px; }
+.union-btn.active { display:flex; }
+.union-btn:active { background:linear-gradient(180deg,#3f50d8,#3038b8); }
+.union-btn .shield { font-size:18px; writing-mode: horizontal-tb; }
+
+.union-search { width:100%; padding:12px 14px; background:#252540;
+  border:1px solid #3a3a55; border-radius:12px; color:#fff; font-size:15px;
+  outline:none; font-family:inherit; margin-bottom:12px; }
+.union-search::placeholder { color:#708499; }
+
+.union-create-btn { width:100%; padding:13px; margin-bottom:12px;
+  background:linear-gradient(180deg,#4a5cf5,#3a48d0); border:none;
+  border-radius:12px; color:#fff; font-size:15px; font-weight:700;
+  cursor:pointer; font-family:inherit; }
+.union-create-btn:active { background:linear-gradient(180deg,#3f50d8,#3038b8); }
+
+.union-row { display:flex; align-items:center; padding:12px 10px; gap:12px;
+  border-bottom:1px solid #2a2a44; cursor:pointer; border-radius:10px; }
+.union-row:active { background:#252540; }
+.union-tag { width:44px; height:44px; border-radius:10px; display:flex;
+  align-items:center; justify-content:center; font-weight:800; font-size:13px;
+  color:#fff; flex-shrink:0; letter-spacing:1px; }
+.union-body { flex:1; min-width:0; }
+.union-name { font-weight:600; font-size:15px; overflow:hidden;
+  text-overflow:ellipsis; white-space:nowrap; }
+.union-desc { color:#8888aa; font-size:12px; margin-top:2px; overflow:hidden;
+  text-overflow:ellipsis; white-space:nowrap; }
+.union-members { color:#ffd75e; font-weight:700; font-size:13px;
+  text-align:right; flex-shrink:0; }
+.union-badge { background:#2a8f4a; color:#fff; font-size:10px; font-weight:700;
+  padding:2px 8px; border-radius:10px; margin-left:6px; }
+
+.union-info-head { display:flex; flex-direction:column; align-items:center;
+  padding:6px 0 14px; gap:8px; }
+.union-info-tag { width:80px; height:80px; border-radius:18px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:26px; font-weight:800; color:#fff; letter-spacing:1px; }
+.union-info-name { font-size:20px; font-weight:700; text-align:center; }
+.union-info-desc { color:#8888aa; font-size:13px; text-align:center; padding:0 10px; }
+.union-members-list { max-height:280px; overflow-y:auto; margin-top:8px; }
+
+.union-action { width:100%; padding:13px; border:none; border-radius:12px;
+  font-size:15px; font-weight:700; cursor:pointer; font-family:inherit;
+  margin-top:12px; }
+.union-action.join { background:linear-gradient(180deg,#2a8f4a,#227a3f); color:#fff; }
+.union-action.leave { background:linear-gradient(180deg,#8f2a2a,#7a2323); color:#fff; }
+.union-action:active { transform:scale(.98); }
+
+.top-btn { position:fixed; top:50%; right:0; transform:translateY(-50%);
+  background:linear-gradient(180deg,#ffb020,#e89010); color:#fff;
+  padding:14px 8px; border-radius:14px 0 0 14px; cursor:pointer;
+  font-weight:700; font-size:13px; writing-mode: vertical-rl; text-orientation: mixed;
+  box-shadow: -4px 0 14px rgba(255,180,40,.4); z-index:50;
+  display:none; flex-direction:column; align-items:center; gap:6px;
+  letter-spacing:2px; }
+.top-btn.active { display:flex; }
+.top-btn:active { background:linear-gradient(180deg,#e8a010,#c88008); }
+.top-btn .trophy { font-size:18px; writing-mode: horizontal-tb; }
+
+.modal-bg { position:fixed; inset:0; background:rgba(0,0,0,.75); display:flex;
+  align-items:center; justify-content:center; z-index:100; padding:16px; animation: fade .2s; }
 @keyframes fade { from{opacity:0} to{opacity:1} }
 @keyframes slide-up { from{transform:translateY(100%)} to{transform:translateY(0)} }
-.modal-sheet { width:100%; max-width:480px; background:#1c1c2e; border-radius:22px 22px 0 0;
-  padding:18px 16px 24px; animation: slide-up .25s ease-out; max-height:80vh;
-  overflow-y:auto; -webkit-overflow-scrolling:touch; }
-.modal-sheet .handle { width:40px; height:4px; background:#3a3a55; border-radius:2px;
-  margin:0 auto 14px; }
-.modal-sheet h3 { text-align:center; font-size:19px; margin-bottom:16px; }
+.modal-sheet { width:100%; max-width:480px; background:#1c1c2e; border-radius:20px;
+  padding:20px 18px; animation: fade .2s; max-height:82vh; overflow-y:auto;
+  -webkit-overflow-scrolling:touch; position:relative; }
+.modal-sheet.bottom { border-radius:22px 22px 0 0; align-self:flex-end;
+  animation: slide-up .25s ease-out; }
+.modal-sheet h3 { text-align:center; font-size:19px; margin-bottom:16px; color:#ffd75e; }
+.modal-close { position:absolute; top:14px; right:16px; font-size:26px; color:#8888aa;
+  cursor:pointer; line-height:1; }
+
 .up-row { display:flex; align-items:center; padding:12px; background:#252540;
   border-radius:14px; margin-bottom:10px; gap:12px; cursor:pointer;
   transition: transform .1s, background .15s, opacity .2s;
@@ -122,9 +187,45 @@ body { background: radial-gradient(ellipse at 50% 20%, #232340 0%, #14141f 70%);
 .up-row .up-lvl { font-size:11px; color:#ffd75e; margin-top:2px; }
 .up-row .up-cost { font-size:14px; font-weight:700; color:#ffd75e; text-align:right; flex-shrink:0; }
 .up-row .up-cost.off { color:#e17076; }
+
+.top-row { display:flex; align-items:center; padding:12px 10px; gap:12px;
+  border-bottom:1px solid #2a2a44; cursor:pointer; border-radius:10px; }
+.top-row:active { background:#252540; }
+.top-row .place { width:32px; font-size:16px; font-weight:800; text-align:center;
+  color:#8888aa; flex-shrink:0; }
+.top-row .place.gold { color:#ffd75e; }
+.top-row .place.silver { color:#c8c8d0; }
+.top-row .place.bronze { color:#cd7f32; }
+.top-row .t-avatar { width:40px; height:40px; border-radius:50%; display:flex;
+  align-items:center; justify-content:center; font-weight:700; font-size:16px;
+  color:#fff; flex-shrink:0; }
+.top-row .t-body { flex:1; min-width:0; }
+.top-row .t-name { font-weight:600; font-size:15px; overflow:hidden;
+  text-overflow:ellipsis; white-space:nowrap; }
+.top-row .t-sub { color:#8888aa; font-size:12px; margin-top:2px; }
+.top-row .t-coins { color:#ffd75e; font-weight:700; font-size:14px;
+  text-align:right; flex-shrink:0; }
+
+.profile-head { display:flex; flex-direction:column; align-items:center;
+  padding:8px 0 16px; gap:8px; }
+.profile-head .p-avatar { width:80px; height:80px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  font-size:32px; font-weight:800; color:#fff; }
+.profile-head .p-name { font-size:20px; font-weight:700; }
+.profile-head .p-sub { color:#8888aa; font-size:13px; }
+
+.stat-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:8px; }
+.stat-box { background:#252540; border-radius:12px; padding:12px; text-align:center;
+  border:1px solid #2a2a44; }
+.stat-box .s-val { font-size:18px; font-weight:800; color:#ffd75e; margin-bottom:2px; }
+.stat-box .s-label { font-size:11px; color:#8888aa; text-transform:uppercase;
+  letter-spacing:.5px; }
+
+.loading { text-align:center; color:#8888aa; padding:20px; }
+
 .toast { position:fixed; bottom:100px; left:50%; transform:translateX(-50%);
   background:#2a2a44; padding:10px 18px; border-radius:20px; font-size:13px;
-  color:#fff; opacity:0; transition:opacity .3s; pointer-events:none; z-index:200; }
+  color:#fff; opacity:0; transition:opacity .3s; pointer-events:none; z-index:300; }
 .toast.show { opacity:1; }
 ::-webkit-scrollbar { width:4px; }
 ::-webkit-scrollbar-thumb { background:#4a4a6a; border-radius:2px; }
@@ -132,7 +233,6 @@ body { background: radial-gradient(ellipse at 50% 20%, #232340 0%, #14141f 70%);
 </head>
 <body>
 
-<!-- AUTH -->
 <div class="auth" id="authScreen">
   <div class="auth-logo">💰</div>
   <div class="auth-title">Рублёвка</div>
@@ -144,7 +244,6 @@ body { background: radial-gradient(ellipse at 50% 20%, #232340 0%, #14141f 70%);
   <div class="auth-switch" id="authSwitch">Создать аккаунт</div>
 </div>
 
-<!-- GAME -->
 <div class="game" id="gameScreen">
   <div class="hud" id="hud">
     <div class="user">👤 <b id="hudUser">...</b></div>
@@ -155,7 +254,7 @@ body { background: radial-gradient(ellipse at 50% 20%, #232340 0%, #14141f 70%);
   <div class="coin-area" id="coinArea">
     <div class="coin-wrap"><div class="coin" id="coin"></div></div>
     <div class="level-info">
-      <div class="level-text">Уровень <span class="num" id="levelNum">1</span> / 100</div>
+      <div class="level-text">Уровень <span class="num" id="levelNum">1</span> / 120</div>
       <div class="progress-bar"><div class="progress-fill" id="progress"></div></div>
     </div>
   </div>
@@ -164,11 +263,24 @@ body { background: radial-gradient(ellipse at 50% 20%, #232340 0%, #14141f 70%);
   </div>
 </div>
 
+<div class="union-btn" id="btnUnion">
+  <div class="shield">🤝</div>
+  <div>СОЮЗ</div>
+</div>
+
+<div class="top-btn" id="btnTop">
+  <div class="trophy">🏆</div>
+  <div>ТОП</div>
+</div>
+
 <div class="toast" id="toast"></div>
 <script>
 (function(){
 'use strict';
 
+const MAX_LEVEL = 120;
+const MAX_CLICK_LVL = 200;
+const MAX_CPS_LVL = 200;
 const STAGES = [
   {c1:"#6b5a3f", c2:"#3a2f1e", c3:"#1a1510", ring:"#2a2218", sym:.15, hl:.20},
   {c1:"#8a6a48", c2:"#503820", c3:"#281a10", ring:"#3a2a18", sym:.17, hl:.25},
@@ -189,9 +301,14 @@ const STAGES = [
   {c1:"#d0f0ff", c2:"#60b8e8", c3:"#2060a0", ring:"#a0d8f0", sym:.45, hl:.60, glow:60, gc:"#a0d8ff"},
   {c1:"#e0c0ff", c2:"#a060e8", c3:"#6028a8", ring:"#c090f0", sym:.48, hl:.62, glow:65, gc:"#c090ff"},
   {c1:"#ffb0b0", c2:"#e03060", c3:"#801030", ring:"#ff5070", sym:.52, hl:.65, glow:75, gc:"#ff5070"},
+  {c1:"#ffb0d0", c2:"#ff3080", c3:"#a01050", ring:"#ff60a0", sym:.55, hl:.68, glow:80, gc:"#ff60a0"},
+  {c1:"#b0ffe0", c2:"#20d090", c3:"#106050", ring:"#60ffb0", sym:.55, hl:.68, glow:85, gc:"#60ffb0"},
+  {c1:"#e0f0ff", c2:"#4090ff", c3:"#103060", ring:"#80c0ff", sym:.58, hl:.70, glow:90, gc:"#80c0ff"},
+  {c1:"#ffe0b0", c2:"#ff8000", c3:"#a04000", ring:"#ffa040", sym:.60, hl:.72, glow:95, gc:"#ffa040"},
   {rainbow:true}
 ];
-const stageForLevel = lvl => Math.min(20, Math.floor((Math.max(1,Math.min(100,lvl))-1)/5));
+const NUM_STAGES = STAGES.length;
+const stageForLevel = lvl => Math.min(NUM_STAGES-1, Math.floor((Math.max(1,Math.min(MAX_LEVEL,lvl))-1)/(MAX_LEVEL/NUM_STAGES)));
 
 const defaults = () => ({coins:0, perClick:1, cps:0, clickLvl:0, cpsLvl:0, level:1, version:0});
 
@@ -200,6 +317,7 @@ let token = localStorage.getItem("ruble_token") || "";
 let username = localStorage.getItem("ruble_user") || "";
 let dirty = false;
 let authMode = "login";
+let pushing = false;
 
 const el = {
   auth: document.getElementById("authScreen"),
@@ -219,6 +337,8 @@ const el = {
   progress: document.getElementById("progress"),
   shop: document.getElementById("btnShop"),
   badge: document.getElementById("shopBadge"),
+  topBtn: document.getElementById("btnTop"),
+  unionBtn: document.getElementById("btnUnion"),
   toast: document.getElementById("toast"),
 };
 
@@ -237,9 +357,10 @@ function fmt(n){
   return (n/1e15).toFixed(2) + "Q";
 }
 
-const costClick = () => Math.floor(10 * Math.pow(1.25, S.clickLvl));
-const costCps   = () => Math.floor(100 * Math.pow(1.25, S.cpsLvl));
-const costLevel = () => Math.floor(50 * Math.pow(S.level, 1.5)) + 50;
+const PRICE_MULT = 1.10;
+const costClick = () => Math.floor(10 * Math.pow(PRICE_MULT, S.clickLvl));
+const costCps   = () => Math.floor(100 * Math.pow(PRICE_MULT, S.cpsLvl));
+const costLevel = () => Math.floor(50 * Math.pow(S.level, 1.3)) + 50;
 
 function applyStage(st){
   const c = el.coin;
@@ -265,9 +386,10 @@ function render(){
   el.coins.textContent = fmt(S.coins);
   el.cpsText.textContent = fmt(S.cps);
   el.levelNum.textContent = S.level;
-  el.progress.style.width = (((S.level-1)%5)+1) * 20 + "%";
+  const perStage = MAX_LEVEL / NUM_STAGES;
+  el.progress.style.width = (((S.level-1)%perStage)/perStage*100) + "%";
   applyStage(STAGES[stageForLevel(S.level)]);
-  const canBuy = S.coins >= costClick() || S.coins >= costCps() || (S.level < 100 && S.coins >= costLevel());
+  const canBuy = S.coins >= costClick() || S.coins >= costCps() || (S.level < MAX_LEVEL && S.coins >= costLevel());
   el.badge.style.display = canBuy ? "inline-block" : "none";
 }
 
@@ -343,15 +465,33 @@ el.authPass.addEventListener("keypress", e => { if (e.key === "Enter") doAuth();
 document.getElementById("btnLogout").onclick = async () => {
   if (!confirm("Выйти?")) return;
   await api("/api/logout", {method:"POST"});
+  logoutLocal();
+};
+
+function logoutLocal(){
   localStorage.removeItem("ruble_token");
   localStorage.removeItem("ruble_user");
   token = ""; username = "";
   el.game.classList.remove("active");
+  el.topBtn.classList.remove("active");
+  el.unionBtn.classList.remove("active");
   el.auth.style.display = "flex";
   setAuthMode("login");
-};
+}
 
-/* ---- GAME SYNC ---- */
+async function enterGame(){
+  el.auth.style.display = "none";
+  el.game.classList.add("active");
+  el.topBtn.classList.add("active");
+  el.unionBtn.classList.add("active");
+  el.hudUser.textContent = username;
+  const {data} = await api("/api/state");
+  if (data.error){ logoutLocal(); return; }
+  S = Object.assign(defaults(), data);
+  render();
+}
+
+/* ---- SYNC ---- */
 async function fetchState(){
   if (!token) return;
   const {status, data} = await api("/api/state");
@@ -361,7 +501,6 @@ async function fetchState(){
     render();
   }
 }
-let pushing = false;
 async function pushState(){
   if (!token || !dirty || pushing) return;
   pushing = true;
@@ -384,32 +523,14 @@ async function pushState(){
     pushing = false;
   }
 }
-function logoutLocal(){
-  localStorage.removeItem("ruble_token");
-  localStorage.removeItem("ruble_user");
-  token = ""; username = "";
-  el.game.classList.remove("active");
-  el.auth.style.display = "flex";
-  setAuthMode("login");
-}
-
-async function enterGame(){
-  el.auth.style.display = "none";
-  el.game.classList.add("active");
-  el.hudUser.textContent = username;
-  const {data} = await api("/api/state");
-  if (data.error){ logoutLocal(); return; }
-  S = Object.assign(defaults(), data);
-  render();
-}
 
 /* ---- SHOP ---- */
 function openShop(){
   const bg = document.createElement("div");
   bg.className = "modal-bg";
   bg.innerHTML = `
-    <div class="modal-sheet" id="shopSheet">
-      <div class="handle"></div>
+    <div class="modal-sheet bottom" id="shopSheet">
+      <span class="modal-close" id="shopClose">×</span>
       <h3>🛒 Магазин</h3>
       <div class="up-row" id="up-click" data-act="click">
         <div class="up-icon">👆</div>
@@ -442,22 +563,25 @@ function openShop(){
   document.body.appendChild(bg);
 
   function refresh(){
-    document.getElementById("lvl-click").innerHTML = `Ур. ${S.clickLvl} · сейчас +${S.perClick} ₽`;
-    document.getElementById("lvl-cps").innerHTML = `Ур. ${S.cpsLvl} · сейчас ${S.cps} ₽/сек`;
+    document.getElementById("lvl-click").innerHTML = `Ур. ${S.clickLvl}/${MAX_CLICK_LVL} · сейчас +${S.perClick} ₽`;
+    document.getElementById("lvl-cps").innerHTML = `Ур. ${S.cpsLvl}/${MAX_CPS_LVL} · сейчас ${S.cps} ₽/сек`;
     const st = stageForLevel(S.level)+1;
-    const toNext = S.level>=100 ? 0 : 5 - ((S.level-1)%5) - 1;
-    document.getElementById("lvl-text").innerHTML = `Ур. ${S.level}/100 · стадия ${st}/20 · ${S.level>=100?"МАКС":`до новой: ${toNext}`}`;
+    document.getElementById("lvl-text").innerHTML = `Ур. ${S.level}/${MAX_LEVEL} · стадия ${st}/${NUM_STAGES}`;
     const cc = costClick(), cp = costCps(), cl = costLevel();
     document.getElementById("c-click").textContent = fmt(cc) + " ₽";
     document.getElementById("c-cps").textContent   = fmt(cp) + " ₽";
-    document.getElementById("c-level").textContent = S.level >= 100 ? "MAX" : fmt(cl) + " ₽";
-    document.getElementById("up-click").classList.toggle("disabled", S.coins < cc);
-    document.getElementById("up-cps").classList.toggle("disabled", S.coins < cp);
-    document.getElementById("up-level").classList.toggle("disabled", S.level >= 100 || S.coins < cl);
-    document.getElementById("c-click").classList.toggle("off", S.coins < cc);
-    document.getElementById("c-cps").classList.toggle("off", S.coins < cp);
-    document.getElementById("c-level").classList.toggle("off", S.level < 100 && S.coins < cl);
+    document.getElementById("c-level").textContent = S.level >= MAX_LEVEL ? "MAX" : fmt(cl) + " ₽";
+    document.getElementById("up-click").classList.toggle("disabled", S.clickLvl >= MAX_CLICK_LVL || S.coins < cc);
+    document.getElementById("up-cps").classList.toggle("disabled", S.cpsLvl >= MAX_CPS_LVL || S.coins < cp);
+    document.getElementById("up-level").classList.toggle("disabled", S.level >= MAX_LEVEL || S.coins < cl);
+    document.getElementById("c-click").classList.toggle("off", S.clickLvl < MAX_CLICK_LVL && S.coins < cc);
+    document.getElementById("c-cps").classList.toggle("off", S.cpsLvl < MAX_CPS_LVL && S.coins < cp);
+    document.getElementById("c-level").classList.toggle("off", S.level < MAX_LEVEL && S.coins < cl);
+    document.getElementById("c-click").textContent = S.clickLvl >= MAX_CLICK_LVL ? "MAX" : fmt(cc) + " ₽";
+    document.getElementById("c-cps").textContent   = S.cpsLvl >= MAX_CPS_LVL ? "MAX" : fmt(cp) + " ₽";
   }
+
+  document.getElementById("shopClose").onclick = () => bg.remove();
 
   const sheet = document.getElementById("shopSheet");
   sheet.addEventListener("pointerdown", e => {
@@ -467,19 +591,21 @@ function openShop(){
     if (row.classList.contains("disabled")){ toast("Не хватает ₽"); return; }
     const act = row.dataset.act;
     if (act === "click"){
+      if (S.clickLvl >= MAX_CLICK_LVL) return toast("Клик на максимуме!");
       const c = costClick();
       if (S.coins < c) return toast("Не хватает ₽");
       S.coins -= c; S.clickLvl++; S.perClick++; dirty = true;
     } else if (act === "cps"){
+      if (S.cpsLvl >= MAX_CPS_LVL) return toast("Автокликер на максимуме!");
       const c = costCps();
       if (S.coins < c) return toast("Не хватает ₽");
       S.coins -= c; S.cpsLvl++; S.cps++; dirty = true;
     } else if (act === "level"){
-      if (S.level >= 100) return toast("Максимум!");
+      if (S.level >= MAX_LEVEL) return toast("Максимум!");
       const c = costLevel();
       if (S.coins < c) return toast("Не хватает ₽");
       S.coins -= c; S.level++; S.perClick++; dirty = true;
-      if (S.level === 100) toast("🏆 ЛЕГЕНДАРНАЯ МОНЕТА!");
+      if (S.level === MAX_LEVEL) toast("🏆 ЛЕГЕНДАРНАЯ МОНЕТА!");
     }
     row.classList.add("flash");
     setTimeout(()=>row.classList.remove("flash"), 180);
@@ -491,6 +617,321 @@ function openShop(){
   refresh();
 }
 el.shop.addEventListener("pointerdown", e => { e.preventDefault(); openShop(); });
+
+/* ---- TOP ---- */
+async function openTop(){
+  const bg = document.createElement("div");
+  bg.className = "modal-bg";
+  bg.innerHTML = `
+    <div class="modal-sheet">
+      <span class="modal-close" id="topClose">×</span>
+      <h3>🏆 Топ игроков</h3>
+      <div id="topList"><div class="loading">Загрузка...</div></div>
+    </div>`;
+  document.body.appendChild(bg);
+
+  let timer = null;
+  let stopped = false;
+
+  const renderTop = (data) => {
+    const list = document.getElementById("topList");
+    if (!list) return;
+    if (!Array.isArray(data) || !data.length){
+      list.innerHTML = `<div class="loading">Пока никого нет</div>`;
+      return;
+    }
+    // сохраняем позицию скролла
+    const scroll = list.scrollTop;
+    list.innerHTML = data.map((u, i) => {
+      const place = i+1;
+      let cls = "";
+      let medal = place;
+      if (place === 1){ cls = "gold"; medal = "🥇"; }
+      else if (place === 2){ cls = "silver"; medal = "🥈"; }
+      else if (place === 3){ cls = "bronze"; medal = "🥉"; }
+      const color = ["#e17076","#7bc862","#e5ca77","#65aadd","#a695e7","#ee7aae","#6ec9cb","#faa774"][u.username.charCodeAt(0)%8];
+      const me = u.username.toLowerCase() === username.toLowerCase();
+      return `<div class="top-row" data-user="${encodeURIComponent(u.username)}" style="${me?'background:#2a2a5a':''}">
+        <div class="place ${cls}">${medal}</div>
+        <div class="t-avatar" style="background:${color}">${u.username[0].toUpperCase()}</div>
+        <div class="t-body">
+          <div class="t-name">${u.username}${me?' (ты)':''}</div>
+          <div class="t-sub">Ур. ${u.level} · ${fmt(u.cps)} ₽/сек</div>
+        </div>
+        <div class="t-coins">${fmt(u.coins)} ₽</div>
+      </div>`;
+    }).join("");
+    list.scrollTop = scroll;
+    list.querySelectorAll(".top-row").forEach(r => {
+      r.onclick = () => {
+        if (stopped) return;
+        stopped = true;
+        clearInterval(timer);
+        bg.remove();
+        openProfile(decodeURIComponent(r.dataset.user));
+      };
+    });
+  };
+
+  const refreshTop = async () => {
+    if (stopped) return;
+    const {data} = await api("/api/top");
+    if (!stopped) renderTop(data);
+  };
+
+  const closeMe = () => {
+    stopped = true;
+    clearInterval(timer);
+    bg.remove();
+  };
+
+  document.getElementById("topClose").onclick = closeMe;
+  bg.addEventListener("pointerdown", e => { if (e.target === bg) closeMe(); });
+
+  await refreshTop();
+  timer = setInterval(refreshTop, 2500);
+}
+el.topBtn.onclick = openTop;
+
+/* ---- PROFILE ---- */
+async function openProfile(name){
+  const bg = document.createElement("div");
+  bg.className = "modal-bg";
+  bg.innerHTML = `
+    <div class="modal-sheet">
+      <span class="modal-close" id="profClose">×</span>
+      <div id="profBody"><div class="loading">Загрузка...</div></div>
+    </div>`;
+  document.body.appendChild(bg);
+
+  let stopped = false;
+  let timer = null;
+
+  const renderProfile = (data) => {
+    const body = document.getElementById("profBody");
+    if (!body) return;
+    if (data.error){ body.innerHTML = `<div class="loading">Игрок не найден</div>`; return; }
+    const color = ["#e17076","#7bc862","#e5ca77","#65aadd","#a695e7","#ee7aae","#6ec9cb","#faa774"][data.username.charCodeAt(0)%8];
+    body.innerHTML = `
+      <div class="profile-head">
+        <div class="p-avatar" style="background:${color}">${data.username[0].toUpperCase()}</div>
+        <div class="p-name">${data.username}</div>
+        <div class="p-sub">в Рублёвке</div>
+      </div>
+      <div class="stat-grid">
+        <div class="stat-box"><div class="s-val">${fmt(data.coins)} ₽</div><div class="s-label">Монеты</div></div>
+        <div class="stat-box"><div class="s-val">${data.level} / ${MAX_LEVEL}</div><div class="s-label">Уровень</div></div>
+        <div class="stat-box"><div class="s-val">${fmt(data.perClick)} ₽</div><div class="s-label">За тап</div></div>
+        <div class="stat-box"><div class="s-val">${fmt(data.cps)} ₽/с</div><div class="s-label">В секунду</div></div>
+        <div class="stat-box"><div class="s-val">${data.clickLvl}/${MAX_CLICK_LVL}</div><div class="s-label">Клик ур.</div></div>
+        <div class="stat-box"><div class="s-val">${data.cpsLvl}/${MAX_CPS_LVL}</div><div class="s-label">CPS ур.</div></div>
+      </div>`;
+  };
+
+  const refreshProfile = async () => {
+    if (stopped) return;
+    const {data} = await api("/api/user/" + encodeURIComponent(name));
+    if (!stopped) renderProfile(data);
+  };
+
+  const closeMe = () => {
+    stopped = true;
+    clearInterval(timer);
+    bg.remove();
+  };
+
+  document.getElementById("profClose").onclick = closeMe;
+  bg.addEventListener("pointerdown", e => { if (e.target === bg) closeMe(); });
+
+  await refreshProfile();
+  timer = setInterval(refreshProfile, 2500);
+}
+
+/* ---- UNIONS ---- */
+async function openUnions(){
+  const bg = document.createElement("div");
+  bg.className = "modal-bg";
+  bg.innerHTML = `
+    <div class="modal-sheet">
+      <span class="modal-close" id="unClose">×</span>
+      <h3>🤝 Союзы</h3>
+      <input class="union-search" id="unSearch" placeholder="Поиск по названию или тегу">
+      <button class="union-create-btn" id="unCreateBtn">+ Создать свой союз</button>
+      <div id="unList"><div class="loading">Загрузка...</div></div>
+    </div>`;
+  document.body.appendChild(bg);
+
+  let stopped = false;
+  const closeMe = () => { stopped = true; bg.remove(); };
+  document.getElementById("unClose").onclick = closeMe;
+  bg.addEventListener("pointerdown", e => { if (e.target === bg) closeMe(); });
+
+  let searchTimer = null;
+  const load = async (search="") => {
+    if (stopped) return;
+    const url = "/api/unions" + (search ? "?search=" + encodeURIComponent(search) : "");
+    const {data} = await api(url);
+    if (stopped) return;
+    const list = document.getElementById("unList");
+    if (!list) return;
+    if (data.error){ list.innerHTML = `<div class="loading">Ошибка</div>`; return; }
+    if (!data.unions.length){
+      list.innerHTML = `<div class="loading">Ничего не найдено</div>`;
+      return;
+    }
+    const myId = data.my_union_id;
+    list.innerHTML = data.unions.map(u => {
+      const mine = (myId === u.id);
+      return `<div class="union-row" data-id="${u.id}">
+        <div class="union-tag" style="background:${u.color}">${u.tag}</div>
+        <div class="union-body">
+          <div class="union-name">${u.name}${mine?'<span class="union-badge">МОЙ</span>':''}</div>
+          <div class="union-desc">${u.description || ""}</div>
+        </div>
+        <div class="union-members">${u.members} 👤</div>
+      </div>`;
+    }).join("");
+    list.querySelectorAll(".union-row").forEach(r => {
+      r.onclick = () => {
+        if (stopped) return;
+        closeMe();
+        openUnionInfo(parseInt(r.dataset.id));
+      };
+    });
+  };
+
+  document.getElementById("unSearch").addEventListener("input", e => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => load(e.target.value.trim()), 300);
+  });
+
+  document.getElementById("unCreateBtn").onclick = () => {
+    closeMe();
+    openUnionCreate();
+  };
+
+  await load("");
+}
+el.unionBtn.onclick = openUnions;
+
+async function openUnionInfo(uid){
+  const bg = document.createElement("div");
+  bg.className = "modal-bg";
+  bg.innerHTML = `
+    <div class="modal-sheet">
+      <span class="modal-close" id="uiClose">×</span>
+      <div id="uiBody"><div class="loading">Загрузка...</div></div>
+    </div>`;
+  document.body.appendChild(bg);
+  let stopped = false;
+  const closeMe = () => { stopped = true; bg.remove(); };
+  document.getElementById("uiClose").onclick = closeMe;
+  bg.addEventListener("pointerdown", e => { if (e.target === bg) closeMe(); });
+
+  let myUnionId = null;
+  const render = (u, myId) => {
+    const body = document.getElementById("uiBody");
+    if (!body) return;
+    if (u.error){ body.innerHTML = `<div class="loading">Союз не найден</div>`; return; }
+    myUnionId = myId;
+    const inThis = (myId === u.id);
+    const membersHtml = u.members.map(m => `
+      <div class="top-row" style="cursor:default">
+        <div class="t-avatar" style="background:${u.color}">${m.username[0].toUpperCase()}</div>
+        <div class="t-body">
+          <div class="t-name">${m.username}${m.role==='founder'?' 👑':''}</div>
+          <div class="t-sub">${m.role==='founder'?'Основатель':'Участник'}</div>
+        </div>
+      </div>
+    `).join("") || `<div class="loading">Пока никого нет</div>`;
+
+    let actionHtml = "";
+    if (inThis){
+      actionHtml = `<button class="union-action leave" id="uiLeave">Выйти из союза</button>`;
+    } else if (myId === null){
+      actionHtml = `<button class="union-action join" id="uiJoin">Вступить</button>`;
+    } else {
+      actionHtml = `<div style="text-align:center;color:#8888aa;padding:12px">Ты уже в другом союзе</div>`;
+    }
+
+    body.innerHTML = `
+      <div class="union-info-head">
+        <div class="union-info-tag" style="background:${u.color}">${u.tag}</div>
+        <div class="union-info-name">${u.name}</div>
+        <div class="union-info-desc">${u.description || ""}</div>
+      </div>
+      <div style="text-align:center;color:#ffd75e;font-weight:700;margin-bottom:6px">
+        Участников: ${u.members.length}
+      </div>
+      <div class="union-members-list">${membersHtml}</div>
+      ${actionHtml}
+    `;
+
+    const jb = document.getElementById("uiJoin");
+    if (jb) jb.onclick = async () => {
+      const {data} = await api("/api/unions/join", {method:"POST", body: JSON.stringify({id: u.id})});
+      if (data.error) return toast(data.error);
+      toast("Вступил в союз!");
+      closeMe();
+    };
+    const lb = document.getElementById("uiLeave");
+    if (lb) lb.onclick = async () => {
+      if (!confirm("Выйти из союза?")) return;
+      const {data} = await api("/api/unions/leave", {method:"POST"});
+      if (data.error) return toast(data.error);
+      toast("Покинул союз");
+      closeMe();
+    };
+  };
+
+  const load = async () => {
+    if (stopped) return;
+    const [uResp, listResp] = await Promise.all([
+      api("/api/unions/" + uid),
+      api("/api/unions")
+    ]);
+    if (stopped) return;
+    render(uResp.data, listResp.data.my_union_id);
+  };
+
+  await load();
+}
+
+function openUnionCreate(){
+  const bg = document.createElement("div");
+  bg.className = "modal-bg";
+  bg.innerHTML = `
+    <div class="modal-sheet">
+      <span class="modal-close" id="ucClose">×</span>
+      <h3>+ Создать союз</h3>
+      <input class="union-search" id="ucName" placeholder="Название (3-40 символов)" maxlength="40">
+      <input class="union-search" id="ucTag" placeholder="Тег (2-4 латинских буквы)" maxlength="4" style="text-transform:uppercase">
+      <input class="union-search" id="ucDesc" placeholder="Описание (необязательно)" maxlength="120">
+      <button class="union-create-btn" id="ucSubmit">Создать</button>
+      <div id="ucErr" style="color:#e17076;text-align:center;font-size:13px;min-height:18px"></div>
+    </div>`;
+  document.body.appendChild(bg);
+  const closeMe = () => bg.remove();
+  document.getElementById("ucClose").onclick = closeMe;
+  bg.addEventListener("pointerdown", e => { if (e.target === bg) closeMe(); });
+
+  document.getElementById("ucTag").addEventListener("input", e => {
+    e.target.value = e.target.value.replace(/[^a-zA-Z]/g, "").toUpperCase();
+  });
+
+  document.getElementById("ucSubmit").onclick = async () => {
+    const name = document.getElementById("ucName").value.trim();
+    const tag = document.getElementById("ucTag").value.trim().toUpperCase();
+    const desc = document.getElementById("ucDesc").value.trim();
+    const err = document.getElementById("ucErr");
+    err.textContent = "";
+    if (!name || !tag){ err.textContent = "Заполни название и тег"; return; }
+    const {data} = await api("/api/unions", {method:"POST", body: JSON.stringify({name, tag, description: desc})});
+    if (data.error){ err.textContent = data.error; return; }
+    toast("Союз создан!");
+    closeMe();
+  };
+}
 
 /* ---- TICK ---- */
 setInterval(() => {

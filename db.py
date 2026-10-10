@@ -34,11 +34,60 @@ def init_db():
         username VARCHAR(50) NOT NULL REFERENCES users(username) ON DELETE CASCADE,
         created DOUBLE PRECISION
     );
+    CREATE TABLE IF NOT EXISTS unions (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(40) UNIQUE NOT NULL,
+        tag VARCHAR(6) NOT NULL,
+        color VARCHAR(16) NOT NULL,
+        description VARCHAR(120),
+        founder VARCHAR(50),
+        created DOUBLE PRECISION
+    );
+    CREATE TABLE IF NOT EXISTS union_members (
+        username VARCHAR(50) PRIMARY KEY REFERENCES users(username) ON DELETE CASCADE,
+        union_id INTEGER NOT NULL REFERENCES unions(id) ON DELETE CASCADE,
+        joined DOUBLE PRECISION,
+        role VARCHAR(16) DEFAULT 'member'
+    );
     """)
     conn.commit()
     cur.close()
     conn.close()
     print("✅ DB init OK")
 
+import random
+
+ADJ = ["Красный","Золотой","Тёмный","Светлый","Кибер","Стальной","Огненный","Ледяной","Быстрый","Дикий","Синий","Мудрый","Хитрый","Грозный","Тихий","Яростный","Небесный","Подземный","Железный","Бескрайний"]
+NOUN = ["Легион","Отряд","Союз","Клан","Орден","Братство","Альянс","Синдикат","Корпорация","Гвардия","Полк","Комитет","Совет","Фронт","Дозор","Патруль","Рейд","Круг","Цех","Союз"]
+
+COLORS = ["#e17076","#7bc862","#e5ca77","#65aadd","#a695e7","#ee7aae","#6ec9cb","#faa774","#ff9d5c","#5fd9c1"]
+
+def seed_unions():
+    conn = get_db(); cur = conn.cursor()
+    cur.execute("SELECT COUNT(*) FROM unions")
+    if cur.fetchone()[0] >= 15:
+        cur.close(); conn.close(); return
+    import time as _t
+    used = set()
+    tries = 0
+    while len(used) < 15 and tries < 100:
+        tries += 1
+        n = f"{random.choice(ADJ)} {random.choice(NOUN)}"
+        if n in used: continue
+        used.add(n)
+        tag = "".join(w[0] for w in n.split()[:2]).upper()[:4]
+        if len(tag) < 2: tag = (tag + "X")[:3]
+        color = random.choice(COLORS)
+        try:
+            cur.execute(
+                "INSERT INTO unions (name, tag, color, description, founder, created) VALUES (%s,%s,%s,%s,%s,%s)",
+                (n, tag, color, "Союз, основанный игроками", None, _t.time())
+            )
+        except Exception:
+            conn.rollback(); continue
+    conn.commit(); cur.close(); conn.close()
+    print(f"✅ Засеяно {len(used)} союзов")
+
 if __name__ == "__main__":
     init_db()
+    seed_unions()
