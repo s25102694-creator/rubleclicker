@@ -229,6 +229,123 @@ body { background: radial-gradient(ellipse at 50% 20%, #232340 0%, #14141f 70%);
 .toast.show { opacity:1; }
 ::-webkit-scrollbar { width:4px; }
 ::-webkit-scrollbar-thumb { background:#4a4a6a; border-radius:2px; }
+
+/* BROADCAST */
+.broadcast-banner { position:fixed; top:0; left:0; right:0; z-index:200;
+  background:linear-gradient(90deg,#8f2a2a,#b02828,#8f2a2a); color:#fff;
+  padding:14px 44px 14px 16px; font-size:14px; font-weight:600;
+  box-shadow:0 4px 20px rgba(180,40,40,.5);
+  display:none; align-items:center; gap:10px; }
+.broadcast-banner.show { display:flex; }
+.broadcast-banner .b-icon { font-size:20px; flex-shrink:0; }
+.broadcast-banner .b-text { flex:1; word-break:break-word; }
+.broadcast-banner .b-close { position:absolute; right:10px; top:50%;
+  transform:translateY(-50%); cursor:pointer; font-size:22px;
+  color:rgba(255,255,255,.7); padding:4px 10px; }
+
+/* CASINO BUTTON */
+.casino-btn { position:fixed; bottom:90px; right:16px; z-index:60;
+  width:60px; height:60px; border-radius:50%;
+  background:linear-gradient(135deg,#d4262a,#8f1015); border:none;
+  color:#fff; font-size:28px; cursor:pointer;
+  box-shadow: 0 6px 20px rgba(212,38,42,.6), inset 0 -3px 8px rgba(0,0,0,.3);
+  display:none; align-items:center; justify-content:center;
+  padding:0; font-family:inherit; }
+.casino-btn.active { display:flex !important; }
+.casino-btn:active { transform:scale(.92); }
+
+/* SHOP TABS */
+.shop-tabs { display:flex; gap:8px; margin-bottom:14px;
+  background:#15152a; border-radius:12px; padding:4px; }
+.shop-tab { flex:1; text-align:center; padding:10px; border-radius:9px;
+  cursor:pointer; font-weight:600; font-size:14px; color:#8888aa;
+  transition:all .15s; }
+.shop-tab.active { background:linear-gradient(180deg,#4a5cf5,#3a48d0);
+  color:#fff; box-shadow:0 3px 10px rgba(74,92,245,.4); }
+
+/* SKINS */
+.skins-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.skin-card { background:#252540; border:2px solid #2a2a44; border-radius:14px;
+  padding:12px; text-align:center; cursor:pointer; transition:all .15s; }
+.skin-card:active { transform:scale(.97); }
+.skin-card.owned { border-color:#2a8f4a; }
+.skin-card.selected { border-color:#4a5cf5;
+  box-shadow:0 0 12px rgba(74,92,245,.5) inset; }
+.skin-preview { width:56px; height:56px; border-radius:50%; margin:0 auto 8px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:24px; font-weight:900; color:rgba(255,255,255,.8);
+  box-shadow: inset 0 -3px 8px rgba(0,0,0,.4), inset 0 2px 6px rgba(255,255,255,.2); }
+.skin-name { font-size:13px; font-weight:600; margin-bottom:4px; }
+.skin-price { font-size:12px; color:#ffd75e; font-weight:700; }
+.skin-price.owned-tag { color:#4ac864; }
+.skin-price.selected-tag { color:#4a5cf5; }
+.skin-preview.skin-classic { background: radial-gradient(circle at 32% 28%, #d8d8d8, #909090 62%, #505050); }
+.skin-preview.skin-silver  { background: radial-gradient(circle at 32% 28%, #f8f8ff, #c0c0d0 62%, #808090); }
+.skin-preview.skin-gold    { background: radial-gradient(circle at 32% 28%, #ffe880, #e0b020 62%, #906010); }
+.skin-preview.skin-emerald { background: radial-gradient(circle at 32% 28%, #80ffb0, #20b060 62%, #105030); }
+.skin-preview.skin-ruby    { background: radial-gradient(circle at 32% 28%, #ff8090, #d02040 62%, #800020); }
+.skin-preview.skin-diamond { background: radial-gradient(circle at 32% 28%, #ffffff, #80d8ff 62%, #4090c0); }
+.skin-preview.skin-neon    { background: radial-gradient(circle at 32% 28%, #ff80ff, #a020c0 62%, #500060); }
+.skin-preview.skin-fire    { background: radial-gradient(circle at 32% 28%, #ffdd80, #ff5500 62%, #802000); }
+.skin-preview.skin-ice     { background: radial-gradient(circle at 32% 28%, #e0ffff, #80d0ff 62%, #305090); }
+.skin-preview.skin-cosmic  { background: radial-gradient(circle at 32% 28%, #8080ff, #4020a0 62%, #100030); }
+.skin-preview.skin-rainbow { background: conic-gradient(from 0deg,#ff5577,#ffaa33,#ffee55,#55ee88,#55bbff,#aa66ff,#ff5577); }
+
+/* CASINO MODAL */
+.casino-modal { width:100%; max-width:420px; background:#1c1c2e;
+  border-radius:22px; padding:20px 18px; }
+.casino-modal h3 { text-align:center; font-size:22px; margin-bottom:14px;
+  color:#ffd75e; letter-spacing:1px; }
+.casino-balance { text-align:center; font-size:14px; color:#8888aa; margin-bottom:14px; }
+.casino-balance b { color:#ffd75e; }
+.casino-tabs { display:flex; gap:8px; margin-bottom:14px;
+  background:#15152a; border-radius:12px; padding:4px; }
+.casino-tab { flex:1; text-align:center; padding:10px; border-radius:9px;
+  cursor:pointer; font-weight:600; font-size:14px; color:#8888aa; }
+.casino-tab.active { background:linear-gradient(180deg,#d4262a,#8f1015); color:#fff; }
+.casino-section { display:none; }
+.casino-section.active { display:block; }
+.casino-input { width:100%; padding:14px; background:#252540;
+  border:1px solid #3a3a55; border-radius:12px; color:#fff;
+  font-size:16px; outline:none; font-family:inherit; margin-bottom:12px; text-align:center; }
+.casino-quick { display:flex; gap:6px; margin-bottom:12px; }
+.casino-quick button { flex:1; padding:10px 4px; background:#252540;
+  border:1px solid #3a3a55; border-radius:10px; color:#fff;
+  font-size:12px; font-weight:600; cursor:pointer; font-family:inherit; }
+.casino-action { width:100%; padding:14px; border:none; border-radius:12px;
+  font-size:16px; font-weight:700; cursor:pointer; font-family:inherit;
+  color:#fff; margin-bottom:8px; }
+.casino-action.coin { background:linear-gradient(180deg,#ffb020,#e89010); }
+.casino-action.flip { background:linear-gradient(180deg,#4a5cf5,#3a48d0); }
+.casino-result { text-align:center; padding:16px; margin-top:8px;
+  border-radius:12px; font-size:15px; font-weight:700; display:none; }
+.casino-result.win { background:#2a8f4a; color:#fff; }
+.casino-result.lose { background:#8f2a2a; color:#fff; }
+.casino-coin { width:80px; height:80px; border-radius:50%; margin:10px auto;
+  display:flex; align-items:center; justify-content:center;
+  font-size:36px; font-weight:900; color:rgba(255,255,255,.85);
+  background:radial-gradient(circle at 32% 28%,#ffe880,#e0b020 62%,#906010);
+  box-shadow: inset 0 -4px 10px rgba(0,0,0,.4), inset 0 3px 8px rgba(255,255,255,.3);
+  transition: transform .6s cubic-bezier(.4,0,.2,1); }
+.casino-coin.flipping { animation: coinflip 1s ease-in-out; }
+@keyframes coinflip {
+  0% { transform: rotateY(0deg) scale(1); }
+  50% { transform: rotateY(720deg) scale(1.1); }
+  100% { transform: rotateY(1440deg) scale(1); }
+}
+.casino-dice { width:80px; height:80px; border-radius:16px; margin:10px auto;
+  display:flex; align-items:center; justify-content:center;
+  font-size:44px; background:#fff; color:#222;
+  box-shadow: 0 6px 16px rgba(0,0,0,.5); }
+.casino-dice.rolling { animation: diceroll .8s ease-out; }
+@keyframes diceroll {
+  0% { transform: rotate(0deg) scale(1); }
+  25% { transform: rotate(90deg) scale(1.15); }
+  50% { transform: rotate(180deg) scale(.95); }
+  75% { transform: rotate(270deg) scale(1.1); }
+  100% { transform: rotate(360deg) scale(1); }
+}
+
 </style>
 </head>
 <body>
@@ -553,10 +670,6 @@ function openShop(){
     <div class="modal-sheet bottom" id="shopSheet">
       <span class="modal-close" id="shopClose">×</span>
       <h3>🛒 Магазин</h3>
-      <div class="shop-tabs">
-        <div class="shop-tab active" data-tab="upgrades">Улучшения</div>
-        <div class="shop-tab" data-tab="skins">Скины</div>
-      </div>
       <div id="shopUpgrades">
       <div class="up-row" id="up-click" data-act="click">
         <div class="up-icon">👆</div>
@@ -586,7 +699,6 @@ function openShop(){
         <div class="up-cost" id="c-level"></div>
       </div>
       </div>
-      <div id="shopSkins" style="display:none"><div id="skinsList"></div></div>
     </div>`;
   document.body.appendChild(bg);
 
@@ -611,10 +723,6 @@ function openShop(){
   }
 
   document.getElementById("shopClose").onclick = () => bg.remove();
-
-  bg.querySelectorAll(".shop-tab").forEach(t => {
-    t.onclick = () => shopTabSwitch(bg, t.dataset.tab);
-  });
 
   const sheet = document.getElementById("shopSheet");
   sheet.addEventListener("pointerdown", e => {
