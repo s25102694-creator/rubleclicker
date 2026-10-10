@@ -115,7 +115,7 @@ def state():
     uname = auth_user()
     if not uname: return jsonify({"error":"not_logged_in"}), 401
     conn = get_db(); cur = conn.cursor(cursor_factory=RealDictCursor)
-    cur.execute("SELECT coins, per_click, cps, click_lvl, cps_lvl, level, version FROM users WHERE username=%s", (uname,))
+    cur.execute("SELECT coins, per_click, cps, click_lvl, cps_lvl, level, version, COALESCE(infinite, FALSE) AS infinite FROM users WHERE username=%s", (uname,))
     u = cur.fetchone()
     cur.close(); conn.close()
     if not u: return jsonify({"error":"not_logged_in"}), 401
@@ -126,7 +126,8 @@ def state():
         "clickLvl": int(u["click_lvl"]),
         "cpsLvl": int(u["cps_lvl"]),
         "level": int(u["level"]),
-        "version": int(u["version"])
+        "version": int(u["version"]),
+        "infinite": bool(u["infinite"])
     })
 
 @app.route("/api/save", methods=["POST"])

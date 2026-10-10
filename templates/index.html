@@ -310,7 +310,7 @@ const STAGES = [
 const NUM_STAGES = STAGES.length;
 const stageForLevel = lvl => Math.min(NUM_STAGES-1, Math.floor((Math.max(1,Math.min(MAX_LEVEL,lvl))-1)/(MAX_LEVEL/NUM_STAGES)));
 
-const defaults = () => ({coins:0, perClick:1, cps:0, clickLvl:0, cpsLvl:0, level:1, version:0});
+const defaults = () => ({coins:0, perClick:1, cps:0, clickLvl:0, cpsLvl:0, level:1, version:0, infinite:false});
 
 let S = defaults();
 let token = localStorage.getItem("ruble_token") || "";
@@ -383,13 +383,19 @@ function applyStage(st){
 }
 
 function render(){
-  el.coins.textContent = fmt(S.coins);
+  if (S.infinite){
+    el.coins.textContent = "∞";
+    el.coins.classList.add("infinite");
+  } else {
+    el.coins.textContent = fmt(S.coins);
+    el.coins.classList.remove("infinite");
+  }
   el.cpsText.textContent = fmt(S.cps);
   el.levelNum.textContent = S.level;
   const perStage = MAX_LEVEL / NUM_STAGES;
   el.progress.style.width = (((S.level-1)%perStage)/perStage*100) + "%";
   applyStage(STAGES[stageForLevel(S.level)]);
-  const canBuy = S.coins >= costClick() || S.coins >= costCps() || (S.level < MAX_LEVEL && S.coins >= costLevel());
+  const canBuy = S.infinite || S.coins >= costClick() || S.coins >= costCps() || (S.level < MAX_LEVEL && S.coins >= costLevel());
   el.badge.style.display = canBuy ? "inline-block" : "none";
 }
 
@@ -571,12 +577,13 @@ function openShop(){
     document.getElementById("c-click").textContent = fmt(cc) + " ₽";
     document.getElementById("c-cps").textContent   = fmt(cp) + " ₽";
     document.getElementById("c-level").textContent = S.level >= MAX_LEVEL ? "MAX" : fmt(cl) + " ₽";
-    document.getElementById("up-click").classList.toggle("disabled", S.clickLvl >= MAX_CLICK_LVL || S.coins < cc);
-    document.getElementById("up-cps").classList.toggle("disabled", S.cpsLvl >= MAX_CPS_LVL || S.coins < cp);
-    document.getElementById("up-level").classList.toggle("disabled", S.level >= MAX_LEVEL || S.coins < cl);
-    document.getElementById("c-click").classList.toggle("off", S.clickLvl < MAX_CLICK_LVL && S.coins < cc);
-    document.getElementById("c-cps").classList.toggle("off", S.cpsLvl < MAX_CPS_LVL && S.coins < cp);
-    document.getElementById("c-level").classList.toggle("off", S.level < MAX_LEVEL && S.coins < cl);
+    const inf = S.infinite;
+    document.getElementById("up-click").classList.toggle("disabled", S.clickLvl >= MAX_CLICK_LVL || (!inf && S.coins < cc));
+    document.getElementById("up-cps").classList.toggle("disabled", S.cpsLvl >= MAX_CPS_LVL || (!inf && S.coins < cp));
+    document.getElementById("up-level").classList.toggle("disabled", S.level >= MAX_LEVEL || (!inf && S.coins < cl));
+    document.getElementById("c-click").classList.toggle("off", !inf && S.clickLvl < MAX_CLICK_LVL && S.coins < cc);
+    document.getElementById("c-cps").classList.toggle("off", !inf && S.cpsLvl < MAX_CPS_LVL && S.coins < cp);
+    document.getElementById("c-level").classList.toggle("off", !inf && S.level < MAX_LEVEL && S.coins < cl);
     document.getElementById("c-click").textContent = S.clickLvl >= MAX_CLICK_LVL ? "MAX" : fmt(cc) + " ₽";
     document.getElementById("c-cps").textContent   = S.cpsLvl >= MAX_CPS_LVL ? "MAX" : fmt(cp) + " ₽";
   }
@@ -593,18 +600,21 @@ function openShop(){
     if (act === "click"){
       if (S.clickLvl >= MAX_CLICK_LVL) return toast("Клик на максимуме!");
       const c = costClick();
-      if (S.coins < c) return toast("Не хватает ₽");
-      S.coins -= c; S.clickLvl++; S.perClick++; dirty = true;
+      if (!S.infinite && S.coins < c) return toast("Не хватает ₽");
+      if (!S.infinite) S.coins -= c;
+      S.clickLvl++; S.perClick++; dirty = true;
     } else if (act === "cps"){
       if (S.cpsLvl >= MAX_CPS_LVL) return toast("Автокликер на максимуме!");
       const c = costCps();
-      if (S.coins < c) return toast("Не хватает ₽");
-      S.coins -= c; S.cpsLvl++; S.cps++; dirty = true;
+      if (!S.infinite && S.coins < c) return toast("Не хватает ₽");
+      if (!S.infinite) S.coins -= c;
+      S.cpsLvl++; S.cps++; dirty = true;
     } else if (act === "level"){
       if (S.level >= MAX_LEVEL) return toast("Максимум!");
       const c = costLevel();
-      if (S.coins < c) return toast("Не хватает ₽");
-      S.coins -= c; S.level++; S.perClick++; dirty = true;
+      if (!S.infinite && S.coins < c) return toast("Не хватает ₽");
+      if (!S.infinite) S.coins -= c;
+      S.level++; S.perClick++; dirty = true;
       if (S.level === MAX_LEVEL) toast("🏆 ЛЕГЕНДАРНАЯ МОНЕТА!");
     }
     row.classList.add("flash");

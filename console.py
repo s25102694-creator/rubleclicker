@@ -14,6 +14,9 @@ HELP = """
 ║  /cps <ник> <N>            ₽/сек             ║
 ║  /click <ник> <N>          ₽ за тап          ║
 ║  /reset <ник>              сбросить прогресс ║
+║  /infinite <ник>           ∞ монеты (вкл)   ║
+║  /finite <ник>             выключить ∞       ║
+║  /god <ник>                всё на максимум   ║
 ║  /delete <ник>             удалить игрока    ║
 ║  /passwd <ник> <new>       сменить пароль    ║
 ║  /top                      топ по монетам    ║
@@ -95,6 +98,20 @@ def main():
             elif cmd == "find":
                 if len(args) < 1: print("❌ /find <ник>"); continue
                 cmd_find(args[0])
+            elif cmd in ("infinite","finite","god"):
+                if len(args) < 1: print(f"❌ /{cmd} <ник>"); continue
+                name = args[0]; u = get_one(name)
+                if not u: print(f"❌ {name} не найден"); continue
+                if cmd == "infinite":
+                    update(name, infinite=True)
+                    print(f"♾️  {u[1]}: бесконечные монеты ВКЛ")
+                elif cmd == "finite":
+                    update(name, infinite=False)
+                    print(f"🔒 {u[1]}: бесконечные монеты ВЫКЛ")
+                elif cmd == "god":
+                    update(name, infinite=True, per_click=9999999, cps=9999999,
+                           click_lvl=200, cps_lvl=200, level=120)
+                    print(f"⚡ {u[1]}: GOD MODE — ∞ + всё на максимум")
             elif cmd in ("coins","give","take","set","level","cps","click","reset"):
                 if cmd != "reset" and len(args) < 2: print("❌ мало аргументов"); continue
                 if cmd == "reset" and len(args) < 1: print("❌ /reset <ник>"); continue

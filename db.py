@@ -29,6 +29,7 @@ def init_db():
         level INTEGER DEFAULT 1,
         version INTEGER DEFAULT 0
     );
+    cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS infinite BOOLEAN DEFAULT FALSE")
     CREATE TABLE IF NOT EXISTS tokens (
         token VARCHAR(64) PRIMARY KEY,
         username VARCHAR(50) NOT NULL REFERENCES users(username) ON DELETE CASCADE,
